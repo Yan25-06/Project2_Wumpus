@@ -1,3 +1,5 @@
+# This file contains constraint settings for the Wumpus World game.
+# It defines various constants that control the game's behavior, such as grid size, pit probability, and scoring system.
 # Wumpus World Configuration Settings
 
 # Game Settings
@@ -24,6 +26,5 @@ DIRECTION_VECTORS = {
 # Agent Types
 AGENT_TYPES = {
     'RANDOM': 'random',
-    'HYBRID': 'hybrid',
-    'INTELLIGENT': 'intelligent'
+    'HYBRID': 'hybrid'
 }

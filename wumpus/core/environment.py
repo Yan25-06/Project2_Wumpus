@@ -21,6 +21,7 @@ class Environment:
         self.place_wumpus(K)
         self.place_gold()
 
+    # Randomly place pits based on probability
     def place_pits(self, pit_prob):
         for y in range(self.N):
             for x in range(self.N):
@@ -28,6 +29,8 @@ class Environment:
                 if random.random() < pit_prob:
                     self.grid[y][x].has_pit = True
 
+    # Randomly place Wumpus
+    # Ensure at least K Wumpuses are placed, not in (0, 0)
     def place_wumpus(self, K):
         placed = 0
         while placed < K:
@@ -37,6 +40,7 @@ class Environment:
                 self.grid[y][x].has_wumpus = True
                 placed += 1
 
+    # Randomly place gold
     def place_gold(self):
         while True:
             x = random.randint(0, self.N - 1)

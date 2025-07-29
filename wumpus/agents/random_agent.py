@@ -1,6 +1,9 @@
 import random
 from ..agents.agent import Agent
 
+# Random Agent for Wumpus World
+# This agent makes random decisions based on the current state of the environment.
+# Use for testing or as a baseline agent.
 class RandomAgent(Agent):
     def step(self):
         if not self.alive:

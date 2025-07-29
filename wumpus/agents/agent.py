@@ -1,5 +1,7 @@
 from abc import ABC, abstractmethod
 
+# Agent base class for Wumpus World
+# This class defines the basic structure and methods that all agents must implement.
 class Agent(ABC):
     def __init__(self, env):
         self.env = env
