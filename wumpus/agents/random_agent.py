@@ -1,5 +1,5 @@
 import random
-from agent import Agent
+from Project2_Wumpus.wumpus.agents.agent import Agent
 
 class RandomAgent(Agent):
     def step(self):
