@@ -1,7 +1,7 @@
 from environment import Environment
-from agent import RandomAgent
+from random_agent import RandomAgent
 
-env = Environment(N=4)  # dễ debug hơn
+env = Environment(N=4)
 agent = RandomAgent(env)
 
 steps = 0

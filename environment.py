@@ -15,6 +15,7 @@ class Environment:
         self.agent_pos = (0, 0)
         self.agent_dir = 'E'  # E, N, W, S
         self.scream = False
+        self.wumpus = K
 
         self.place_pits(pit_prob)
         self.place_wumpus(K)
