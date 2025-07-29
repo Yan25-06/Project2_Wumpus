@@ -1,5 +1,5 @@
-from Project2_Wumpus.wumpus.core.environment import Environment
-from Project2_Wumpus.wumpus.agents.random_agent import RandomAgent
+from .core.environment import Environment
+from .agents.random_agent import RandomAgent
 
 env = Environment(N=4)
 agent = RandomAgent(env)
