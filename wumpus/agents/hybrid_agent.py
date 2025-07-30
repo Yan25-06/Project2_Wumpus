@@ -1,4 +1,4 @@
-from Project2_Wumpus.wumpus.agents.agent import Agent
+from ..agents.agent import Agent
 
 class HybridAgent(Agent):
     def step(self):
