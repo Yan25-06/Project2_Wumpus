@@ -18,6 +18,19 @@ class Predicate:
     
     def __repr__(self):
         return f"{self.name}({','.join(self.args)})"
+    
+    def replace(self, old: str, new: str) -> str:
+        """Replace occurrences of old with new in the predicate's string representation"""
+        new_args = [arg.replace(old, new) for arg in self.args]
+        return f"{self.name}({','.join(new_args)})"
+
+    def __hash__(self):
+        return hash((self.name, tuple(self.args)))
+
+    def __eq__(self, value):
+        if isinstance(value, Predicate):
+            return self.name == value.name and self.args == value.args
+        return False
 
 @dataclass
 class Not:
@@ -26,6 +39,13 @@ class Not:
     def __repr__(self):
         return f"!{self.expr}"
 
+    def __hash__(self):
+        return hash((self.__class__, self.expr))
+
+    def __eq__(self, value):
+        if isinstance(value, Not):
+            return self.expr == value.expr
+        return False
 @dataclass
 class And:
     left: 'LogicExpr'
@@ -33,6 +53,12 @@ class And:
     
     def __repr__(self):
         return f"({self.left} & {self.right})"
+
+
+    def __eq__(self, value):
+        if isinstance(value, And):
+            return self.left == value.left and self.right == value.right
+        return False
 
 @dataclass
 class Or:
@@ -42,6 +68,16 @@ class Or:
     def __repr__(self):
         return f"({self.left} | {self.right})"
 
+    def __hash__(self):
+        return hash((self.__class__, self.left, self.right))
+
+    def __eq__(self, value):
+        if isinstance(value, Or):
+            return self.left == value.left and self.right == value.right
+        return False
+
+
+
 @dataclass
 class Implies:
     left: 'LogicExpr'
@@ -49,6 +85,14 @@ class Implies:
     
     def __repr__(self):
         return f"({self.left} => {self.right})"
+
+    def __hash__(self):
+        return hash((self.__class__, self.left, self.right))
+
+    def __eq__(self, value):
+        if isinstance(value, Implies):
+            return self.left == value.left and self.right == value.right
+        return False
 
 LogicExpr = Union[Predicate, Not, And, Or, Implies]
 
