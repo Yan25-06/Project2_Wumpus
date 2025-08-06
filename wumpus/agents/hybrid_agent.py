@@ -1,6 +1,10 @@
 from ..agents.agent import Agent
 
 class HybridAgent(Agent):
+    def __init__(self, env):
+        super().__init__(env)
+     
+
     def step(self):
         if not self.alive:
             return False
