@@ -1,13 +1,6 @@
 from ..agents.agent import Agent
 from heapdict import heapdict
-
-DIRECTIONS = ['N', 'E', 'S', 'W']
-DIR_OFFSET = {
-    'N': (0, 1),
-    'E': (1, 0),
-    'S': (0, -1),
-    'W': (-1, 0)
-}
+from ..config.settings import DIRECTIONS, DIRECTION_VECTORS
 
 class PlanningModule:
     def __init__(self, safe_cells, cur_pos, cur_dir):
@@ -19,15 +12,18 @@ class PlanningModule:
     def heuristic(self, pos, goal):
         return abs(goal[0] - pos[0]) + abs(goal[1] - pos[1])
 
-    def _get_cost(self, cur_pos, to_pos, cur_dir):
+    def get_cost(self, cur_pos, to_pos, cur_dir):
         dx, dy = to_pos[0] - cur_pos[0], to_pos[1] - cur_pos[1]
         desired_dir = None
         for d in DIRECTIONS:
-            if DIR_OFFSET[d] == (dx, dy):
+            if DIRECTION_VECTORS[(dx, dy)] == d:
                 desired_dir = d
                 break
 
         return 1 if desired_dir == cur_dir else 2
+
+    def set_safe_cell(self, cell):
+        self.space = cell
 
     def _get_next_pos(self, cur_pos):
         # Adjacent moves in 4 directions
@@ -73,7 +69,7 @@ class PlanningModule:
                 if neighbor in visited:
                     continue
 
-                tentative_g = g_score[current] + self._get_cost(current, neighbor, cur_dir)
+                tentative_g = g_score[current] + self.get_cost(current, neighbor, cur_dir)
 
                 if neighbor not in g_score or tentative_g < g_score[neighbor]:
                     g_score[neighbor] = tentative_g
@@ -83,7 +79,7 @@ class PlanningModule:
 
                     dx, dy = neighbor[0] - current[0], neighbor[1] - current[1]
                     for d in DIRECTIONS:
-                        if DIR_OFFSET[d] == (dx, dy):
+                        if DIRECTION_VECTORS[(dx, dy)] == d:
                             directions_map[neighbor] = d
                             break
 
