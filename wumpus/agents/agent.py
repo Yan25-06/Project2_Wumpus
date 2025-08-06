@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-
+from ..config.settings import DIRECTIONS, DIRECTION_VECTORS
 # Agent base class for Wumpus World
 # This class defines the basic structure and methods that all agents must implement.
 class Agent(ABC):
@@ -50,6 +50,27 @@ class Agent(ABC):
         else:
             print("Bump!")
     
+    def move_to_pos(self, pos):
+        pos_x, pos_y = pos
+        dx = pos_x - self.x
+        dy = pos_y - self.y
+
+        if (dx, dy) not in DIRECTION_VECTORS:
+            raise ValueError("Can only move to adjacent cell.")
+        dir = DIRECTION_VECTORS[(dx, dy)]
+        diff = (DIRECTIONS.index(dir) - DIRECTIONS.index(self.dir)) % 4
+
+        if diff == 1:
+            self.turn_right()
+        elif diff == 2:
+            self.turn_right()
+            self.turn_right()
+        elif diff == 3:
+            self.turn_left()
+        
+        self.move_forward()
+
+
     def grab_gold(self):
         percept = self.env.get_percepts(self.x, self.y)
         if percept['glitter']:

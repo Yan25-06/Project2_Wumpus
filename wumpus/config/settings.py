@@ -17,10 +17,10 @@ MOVE_COST = -1
 # Directions
 DIRECTIONS = ['N', 'E', 'S', 'W']
 DIRECTION_VECTORS = {
-    'N': (0, 1),
-    'E': (1, 0), 
-    'S': (0, -1),
-    'W': (-1, 0)
+    (0, 1) : 'N',
+    (1, 0) : 'E',
+    (0, -1): 'S',
+    (-1, 0): 'W'
 }
 
 # Agent Types
