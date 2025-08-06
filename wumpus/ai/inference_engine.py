@@ -9,9 +9,7 @@ class InferenceEngine:
         self.debug = debug
     
 
-    def get_unknown_symbols(self, query: LogicExpr | str) -> List[Fact]:
-        if isinstance(query, str):
-            query = LogicParser().parse(query)
+    def get_unknown_symbols(self) -> List[Fact]:
 
         all_symbols = self.kb.get_flatten_rules_symbols()
         unknown_symbols = [s for s in all_symbols if s not in self.kb.facts]
@@ -60,7 +58,7 @@ class InferenceEngine:
             return 1.0
 
         # step 2 extract unknown symbols 
-        unknown_symbols = self.get_unknown_symbols(query)
+        unknown_symbols = self.get_unknown_symbols()
 
         if self.debug:
             print(f"Debug: Unknown symbols for query '{query}': {unknown_symbols}")
@@ -74,18 +72,22 @@ class InferenceEngine:
             nonlocal kb_true_count 
             nonlocal query_true_count 
 
-            # base case 
+            # base case: no unkown symbols left 
             if len(unknown_symbols) == 0:
                 if self.is_model_satisfied(self.kb.rules,model): 
+                    if self.debug:
+                        print(f"Debug: Found satisfied model {model} for KB")
                     kb_true_count += 1
                     if self.is_model_satisfied([query], model): 
+                        if self.debug:
+                            print(f"Debug: Found satisfied model {model} for query {query}")
                         query_true_count += 1
                 return
-            
+
+            # generate next symbol with different truth values to try
             next_symbol = unknown_symbols[0] 
             for truth_value in [True, False]:
                 new_model = model.copy()
-                # try the unknow symbol with truth value (unknown symbol is included in the model)
                 if truth_value:
                     new_model.append(next_symbol)
                 # false = absence of the symbol
@@ -137,7 +139,7 @@ def test_get_unknown():
     
     engine = InferenceEngine(kb)
 
-    unknown_symbols = engine.get_unknown_symbols("Pit(1,2)")
+    unknown_symbols = engine.get_unknown_symbols()
     print(f"Unknown symbols for query 'Pit(1,2)': {unknown_symbols}")
 
 def test_model_check_probability():

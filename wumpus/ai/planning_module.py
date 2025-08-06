@@ -1,11 +1,12 @@
 from ..agents.agent import Agent
-from .inference_engine import KnowledgeBase
+from .inference_engine import InferenceEngine, KnowledgeBase
 
 # Implement A* or other planning algorithms here
 class PlanningModule: 
 
-    def __init__(self, kb: KnowledgeBase): 
+    def __init__(self, kb: KnowledgeBase, ie: InferenceEngine): 
         self.kb = kb 
+        self.ie = ie
 
     
 
@@ -26,20 +27,14 @@ class PlanningModule:
     def execute(self, action):
         pass 
 
-    # def update_kb(self, percepts):
-    #     x, y = self.position
-    #     # Add immediate facts
-    #     self.kb.append(f"visited({x},{y})")
-    #     self.kb.append(f"not pit({x},{y})")  # Current cell is safe
-        
-    #     # Handle percepts
-    #     if "breeze" in percepts:
-    #         self.kb.append(f"breeze({x},{y})")
-    #         # Rule: breeze(x,y) ⇒ pit in adjacent cells
-    #         adj_pits = [f"pit({x+dx},{y+dy})" for dx, dy in [(1,0), (-1,0), (0,1), (0,-1)]]
-    #         self.kb.append(f"breeze({x},{y}) ⇒ {' ∨ '.join(adj_pits)}")
-        
-    #     # Similar for stench/Wumpus
+    def update_kb(self, percepts):
+        x, y = self.position
+
+        # Add immediate facts
+        if percepts.get('breeze'):
+            self.kb.add_fact(f"Breeze({x},{y})")
+
+        # Similar for stench/Wumpus
 
     def decide_action(self): 
         # 0. If current cell has gold, pick it up, return to exit
@@ -72,10 +67,22 @@ class PlanningModule:
 
 
     def is_safe(self, x, y):
-        """Uses forward chaining to check safety"""
-        # Your existing forward chaining logic here
+        """Uses model checking to check safety"""
+        # Your existing model checking logic here
+
         # Returns True if both:
         # 1. "not Pit({x},{y})" is derivable
-        # 2. "not Wumpus({x},{y})" is derivable 
+        # 2. "not Wumpus({x},{y})" is derivable
+        prob_no_pit = self.ie.model_check_probability(f"!Pit({x},{y})")  
+        prob_no_wumpus = self.ie.model_check_probability(f"!Wumpus({x},{y})")  
 
+        if prob_no_pit == 1.0 and prob_no_wumpus == 1.0:
+            return 1 # 100% safe example
 
+        
+        # more in depth configuration here
+        # may be a dict
+        # { 
+        #     "prob_no_pit": prob_no_pit,
+        #     "prob_no_wumpus": prob_no_wumpus,
+        #}
