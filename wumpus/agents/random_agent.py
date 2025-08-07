@@ -8,7 +8,9 @@ class RandomAgent(Agent):
     def step(self):
         if not self.alive:
             return False
-        if self.grab_gold():
+        percept = self.env.get_percepts(self.x, self.y)
+        if percept['glitter']:
+            self.grab_gold()
             return True
         if(self.x, self.y) == (0, 0):
             action = random.choice(['move', 'turn_left', 'turn_right', 'climb_out', 'shoot'])
