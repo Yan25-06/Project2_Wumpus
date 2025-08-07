@@ -10,7 +10,6 @@ class RandomAgent(Agent):
             return False
         if self.grab_gold():
             return True
-        self.visited.add((self.x, self.y))
         if(self.x, self.y) == (0, 0):
             action = random.choice(['move', 'turn_left', 'turn_right', 'climb_out', 'shoot'])
         else:
