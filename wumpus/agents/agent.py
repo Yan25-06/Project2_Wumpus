@@ -84,11 +84,13 @@ class Agent(ABC):
     def shoot(self):
         if not self.can_shoot:
             print("Agent cannot shoot again yet!")
-            return
+            return False
         self.score -= 10
         self.can_shoot = False
         
         if self.env.shot_wumpus():
             print("Agent killed the Wumpus!")
+            return True
         else:
             print("Agent shot but missed.")
+            return False
