@@ -8,33 +8,32 @@ class GameBoardUI(tk.Tk):
     def __init__(self, width=8, height=8):
         super().__init__()
         
-        self.title("Wumpus World - Random Agent")
+        self.title("Wumpus World Game Board")
+        
+        # Disable window resizing and maximize button
+        self.resizable(False, False)
         
         # Make window fullscreen
-        self.state('zoomed')  # For Windows
-        # Alternative for cross-platform:
-        # self.attributes('-fullscreen', True)
+        #self.state('zoomed')  # For Windows
         
-        # Get screen dimensions
+        # Board Frame
         screen_width = self.winfo_screenwidth()
         screen_height = self.winfo_screenheight()
-        
+
+        print(f"Screen size: {screen_width}x{screen_height}") 
         self.width = width
         self.height = height
         
         # Calculate cell size based on screen size
-        # Leave space for controls and status (about 300px)
-        available_width = screen_width - 100
-        available_height = screen_height - 350
+        # Leave space for controls panel on right (about 400px) and margins
+        available_width = screen_width - 600  # Reserve more space for right panel
+        available_height = screen_height - 250  # Leave space for title and margins
         
-        # Calculate optimal cell size
+        # Calculate optimal cell size - made bigger
         max_cell_width = available_width // self.width
         max_cell_height = available_height // self.height
-        self.cell_size = min(max_cell_width, max_cell_height, 120)  # Cap at 120px
-        
-        # Bind keyboard shortcuts
-        self.bind('<Escape>', self.exit_fullscreen)
-        self.bind('<F11>', self.toggle_fullscreen)
+        self.cell_size = 87# Increased cap to 180px for bigger board
+        print(f"Cell size: {self.cell_size}px")  # Debugging output 
         
         # Initialize environment and agent
         self.env = Environment()
@@ -42,24 +41,10 @@ class GameBoardUI(tk.Tk):
         self.game_running = False
         self.game_over = False
         self.steps = 0
-        self.fullscreen = True
+        self.moves_history = []  # Track all agent moves
         
         self.setup_ui()
     
-    def exit_fullscreen(self, event=None):
-        """Exit fullscreen mode"""
-        self.state('normal')
-        self.fullscreen = False
-        
-    def toggle_fullscreen(self, event=None):
-        """Toggle between fullscreen and windowed mode"""
-        if self.fullscreen:
-            self.state('normal')
-            self.fullscreen = False
-        else:
-            self.state('zoomed')
-            self.fullscreen = True
-        
     def setup_ui(self):
         # Main frame
         main_frame = ttk.Frame(self)
@@ -69,20 +54,16 @@ class GameBoardUI(tk.Tk):
         title_frame = ttk.Frame(main_frame)
         title_frame.pack(fill='x', pady=(0, 10))
         
-        title_label = ttk.Label(title_frame, text="WUMPUS WORLD - RANDOM AGENT", 
-                               font=('Arial', 24, 'bold'))
-        title_label.pack()
+        # Create horizontal layout: board on left, controls on right
+        content_frame = ttk.Frame(main_frame)
+        content_frame.pack(expand=True, fill='both', pady=(0, 10))
         
-        help_label = ttk.Label(title_frame, text="Press F11 to toggle fullscreen | Press ESC to exit fullscreen", 
-                              font=('Arial', 12))
-        help_label.pack()
-        
-        # Game board canvas - centered
-        canvas_frame = ttk.Frame(main_frame)
-        canvas_frame.pack(expand=True, pady=(0, 10))
+        # Left side - Game board
+        board_frame = ttk.LabelFrame(content_frame, text="GAME BOARD", padding=10)
+        board_frame.pack(side='left', fill='both', padx=(0, 10))  # Removed expand=True and fill='both'
         
         self.canvas = tk.Canvas(
-            canvas_frame, 
+            board_frame, 
             width=self.width * self.cell_size,
             height=self.height * self.cell_size,
             bg='white',
@@ -91,86 +72,87 @@ class GameBoardUI(tk.Tk):
         )
         self.canvas.pack()
         
-        # Control frame - larger buttons
-        control_frame = ttk.Frame(main_frame)
-        control_frame.pack(fill='x', pady=(10, 0))
+        # Right side - Controls and status
+        right_panel = ttk.Frame(content_frame)
+        right_panel.pack(side='right', fill='y', padx=(10, 0))
         
-        # Center the buttons
-        button_container = ttk.Frame(control_frame)
-        button_container.pack(expand=True)
+        # Control frame - improved layout for right panel
+        control_frame = ttk.LabelFrame(right_panel, text="CONTROLS", padding=10)
+        control_frame.pack(fill='x', pady=(0, 10))
         
-        # Larger buttons with better styling
-        button_style = {'width': 15, 'padding': (10, 5)}
+        # Button styling for vertical layout
+        button_style = {'width': 20, 'padding': (10, 5)}
         
-        self.start_button = ttk.Button(button_container, text="START AGENT", 
+        self.start_button = ttk.Button(control_frame, text="START AGENT", 
                                       command=self.start_game, **button_style)
-        self.start_button.pack(side='left', padx=10)
+        self.start_button.pack(pady=2)
         
-        self.stop_button = ttk.Button(button_container, text="STOP AGENT", 
+        self.stop_button = ttk.Button(control_frame, text="STOP AGENT", 
                                      command=self.stop_game, state='disabled', **button_style)
-        self.stop_button.pack(side='left', padx=10)
+        self.stop_button.pack(pady=2)
         
-        self.step_button = ttk.Button(button_container, text="SINGLE STEP", 
-                                     command=self.single_step, **button_style)
-        self.step_button.pack(side='left', padx=10)
-        
-        self.reset_button = ttk.Button(button_container, text="RESET GAME", 
+        self.reset_button = ttk.Button(control_frame, text="RESET GAME", 
                                       command=self.reset_game, **button_style)
-        self.reset_button.pack(side='left', padx=10)
+        self.reset_button.pack(pady=2)
         
         # Exit button
-        self.exit_button = ttk.Button(button_container, text="EXIT", 
+        self.exit_button = ttk.Button(control_frame, text="EXIT", 
                                      command=self.quit, **button_style)
-        self.exit_button.pack(side='right', padx=10)
+        self.exit_button.pack(pady=2)
         
-        # Status frame - improved layout
-        status_frame = ttk.LabelFrame(main_frame, text="GAME STATUS", padding=10)
+        # Status frame - improved layout for right panel
+        status_frame = ttk.LabelFrame(right_panel, text="GAME STATUS", padding=10)
         status_frame.pack(fill='x', pady=(10, 0))
         
-        # Create two columns for status
-        status_container = ttk.Frame(status_frame)
-        status_container.pack(fill='x')
+        # Status labels with improved layout
+        status_font = ('Arial', 12, 'bold')
         
-        left_status = ttk.Frame(status_container)
-        left_status.pack(side='left', fill='both', expand=True, padx=(0, 20))
+        self.status_label = ttk.Label(status_frame, text="Game Ready - Click START AGENT to begin", 
+                                     font=status_font, foreground='blue', wraplength=250)
+        self.status_label.pack(pady=2)
         
-        right_status = ttk.Frame(status_container)
-        right_status.pack(side='right', fill='both', expand=True)
-        
-        # Status labels with larger fonts
-        status_font = ('Arial', 14, 'bold')
-        
-        self.status_label = ttk.Label(left_status, text="Game Ready - Click START AGENT to begin", 
-                                     font=status_font, foreground='blue')
-        self.status_label.pack(anchor='w', pady=2)
-        
-        self.position_label = ttk.Label(left_status, text=f"Agent Position: ({self.agent.x}, {self.agent.y})", 
+        self.position_label = ttk.Label(status_frame, text=f"Agent Position: ({self.agent.x}, {self.agent.y})", 
                                        font=status_font)
-        self.position_label.pack(anchor='w', pady=2)
+        self.position_label.pack(pady=2)
         
-        self.direction_label = ttk.Label(left_status, text=f"Agent Direction: {self.agent.dir}", 
+        self.direction_label = ttk.Label(status_frame, text=f"Agent Direction: {self.agent.dir}", 
                                         font=status_font)
-        self.direction_label.pack(anchor='w', pady=2)
+        self.direction_label.pack(pady=2)
         
-        self.score_label = ttk.Label(right_status, text=f"Score: {self.agent.score}", 
+        self.score_label = ttk.Label(status_frame, text=f"Score: {self.agent.score}", 
                                     font=status_font, foreground='green')
-        self.score_label.pack(anchor='w', pady=2)
+        self.score_label.pack(pady=2)
         
-        self.steps_label = ttk.Label(right_status, text=f"Steps: {self.steps}", 
+        self.steps_label = ttk.Label(status_frame, text=f"Steps: {self.steps}", 
                                     font=status_font)
-        self.steps_label.pack(anchor='w', pady=2)
+        self.steps_label.pack(pady=2)
         
-        # Percepts frame - improved
-        percepts_frame = ttk.LabelFrame(main_frame, text="CURRENT PERCEPTS", padding=10)
-        percepts_frame.pack(fill='x', pady=(10, 0))
+        # Moves history frame - show recent moves
+        moves_frame = ttk.LabelFrame(right_panel, text="MOVES HISTORY", padding=10)
+        moves_frame.pack(fill='both', expand=True, pady=(10, 0))
         
-        self.percepts_label = ttk.Label(percepts_frame, text="No percepts yet", 
-                                       font=('Arial', 16, 'bold'), foreground='red')
-        self.percepts_label.pack(pady=5)
+        # Create scrollable text widget for moves history
+        moves_container = ttk.Frame(moves_frame)
+        moves_container.pack(fill='both', expand=True)
+        
+        # Scrollbar for moves history
+        scrollbar = ttk.Scrollbar(moves_container)
+        scrollbar.pack(side='right', fill='y')
+        
+        # Text widget for moves history
+        self.moves_text = tk.Text(moves_container, height=10, width=30, 
+                                 font=('Arial', 9), wrap='word',
+                                 yscrollcommand=scrollbar.set)
+        self.moves_text.pack(side='left', fill='both', expand=True)
+        scrollbar.config(command=self.moves_text.yview)
         
         # Draw initial board
         self.draw_board()
         self.update_display()
+        
+        # Add initial position to moves history
+        initial_percepts = self.env.get_percepts(self.agent.x, self.agent.y)
+        self.add_move_to_history("Start", (self.agent.x, self.agent.y), self.agent.dir, "GAME BEGIN")
     
     def draw_board(self):
         self.canvas.delete("all")
@@ -191,18 +173,20 @@ class GameBoardUI(tk.Tk):
     def draw_environment_elements(self):
         for y in range(self.height):
             for x in range(self.width):
-                cell = self.env.grid[y][x]
-                
                 # Draw visited cells
-                if cell.visited:
+                if self.env.is_visited(x, y):
                     x1 = x * self.cell_size + 2
                     y1 = y * self.cell_size + 2
                     x2 = (x + 1) * self.cell_size - 2
                     y2 = (y + 1) * self.cell_size - 2
                     self.canvas.create_rectangle(x1, y1, x2, y2, fill='lightblue', outline='blue', tags='visited')
                 
+                # Draw percepts on ALL cells (not just visited ones)
+                if not self.env.has_gold(x, y) and not self.env.has_wumpus(x, y) and not self.env.has_pit(x, y):
+                    self.draw_percepts_on_cell(x, y)
+                
                 # Draw wumpus
-                if cell.has_wumpus:
+                if self.env.has_wumpus(x, y):
                     x1 = x * self.cell_size + 5
                     y1 = y * self.cell_size + 5
                     x2 = (x + 1) * self.cell_size - 5
@@ -213,7 +197,7 @@ class GameBoardUI(tk.Tk):
                                           text='W', fill='white', font=('Arial', 16, 'bold'), tags='wumpus')
                 
                 # Draw pits
-                if cell.has_pit:
+                if self.env.has_pit(x, y):
                     x1 = x * self.cell_size + 20
                     y1 = y * self.cell_size + 20
                     x2 = (x + 1) * self.cell_size - 20
@@ -221,10 +205,10 @@ class GameBoardUI(tk.Tk):
                     self.canvas.create_rectangle(x1, y1, x2, y2, fill='black', outline='gray', width=2, tags='pit')
                     self.canvas.create_text(x * self.cell_size + self.cell_size//2,
                                           y * self.cell_size + self.cell_size//2,
-                                          text='P', fill='white', font=('Arial', 12, 'bold'), tags='pit')
+                                          text='Pit', fill='white', font=('Arial', 12, 'bold'), tags='pit')
                 
                 # Draw gold
-                if cell.has_gold:
+                if self.env.has_gold(x, y):
                     x1 = x * self.cell_size + 15
                     y1 = y * self.cell_size + 15
                     x2 = (x + 1) * self.cell_size - 15
@@ -232,7 +216,121 @@ class GameBoardUI(tk.Tk):
                     self.canvas.create_oval(x1, y1, x2, y2, fill='gold', outline='orange', width=2, tags='gold')
                     self.canvas.create_text(x * self.cell_size + self.cell_size//2,
                                           y * self.cell_size + self.cell_size//2,
-                                          text='G', fill='black', font=('Arial', 12, 'bold'), tags='gold')
+                                          text='Gold', fill='black', font=('Arial', 12, 'bold'), tags='gold')
+    
+    def draw_percepts_on_cell(self, x, y):
+        """Draw percept indicators on all cells"""
+        # Calculate percepts directly for this cell
+        percepts = {
+            'stench': False,
+            'breeze': False,
+            'glitter': False
+        }
+        
+        # Check for stench (adjacent to wumpus)
+        for dx, dy in [(-1, 0), (1, 0), (0, -1), (0, 1)]:
+            adj_x, adj_y = x + dx, y + dy
+            if 0 <= adj_x < self.width and 0 <= adj_y < self.height:
+                if self.env.has_wumpus(adj_x, adj_y):
+                    percepts['stench'] = True
+                    break
+        
+        # Check for breeze (adjacent to pit)
+        for dx, dy in [(-1, 0), (1, 0), (0, -1), (0, 1)]:
+            adj_x, adj_y = x + dx, y + dy
+            if 0 <= adj_x < self.width and 0 <= adj_y < self.height:
+                if self.env.has_pit(adj_x, adj_y):
+                    percepts['breeze'] = True
+                    break
+        
+        # Check for glitter (gold in same cell)
+        if self.env.has_gold(x, y):
+            percepts['glitter'] = True
+        
+        # Calculate center position for percept indicators
+        cell_x = x * self.cell_size
+        cell_y = y * self.cell_size
+        center_x = cell_x + self.cell_size // 2
+        center_y = cell_y + self.cell_size // 2
+        
+        # Collect percepts and arrange them vertically to avoid overlap
+        percept_list = []
+        if percepts['stench']:
+            percept_list.append(('Stench', 'green', 'darkgreen', 'white'))
+        if percepts['breeze']:
+            percept_list.append(('Breeze', 'blue', 'darkblue', 'white'))
+        if percepts['glitter']:
+            percept_list.append(('Glitter', 'yellow', 'orange', 'black'))
+        
+        # Draw all percepts vertically arranged
+        if len(percept_list) == 1:
+            # Single percept - center it
+            text, fill_color, outline_color, text_color = percept_list[0]
+            radius = 20
+            self.canvas.create_oval(center_x - radius, center_y - radius, 
+                                  center_x + radius, center_y + radius, 
+                                  fill=fill_color, outline=outline_color, width=2, tags='percept')
+            self.canvas.create_text(center_x, center_y, text=text, 
+                                  fill=text_color, font=('Arial', 8, 'bold'), tags='percept')
+        
+        elif len(percept_list) == 2:
+            # Two percepts - arrange vertically
+            for i, (text, fill_color, outline_color, text_color) in enumerate(percept_list):
+                radius = 20
+                y_offset = -12 if i == 0 else 12
+                self.canvas.create_oval(center_x - radius, center_y + y_offset - radius, 
+                                      center_x + radius, center_y + y_offset + radius, 
+                                      fill=fill_color, outline=outline_color, width=2, tags='percept')
+                self.canvas.create_text(center_x, center_y + y_offset, text=text, 
+                                      fill=text_color, font=('Arial', 7, 'bold'), tags='percept')
+        
+        elif len(percept_list) == 3:
+            # Three percepts - arrange in triangle pattern
+            positions = [(-8, -10), (8, -10), (0, 12)]  # top-left, top-right, bottom
+            for i, (text, fill_color, outline_color, text_color) in enumerate(percept_list):
+                radius = 20
+                x_offset, y_offset = positions[i]
+                self.canvas.create_oval(center_x + x_offset - radius, center_y + y_offset - radius, 
+                                      center_x + x_offset + radius, center_y + y_offset + radius, 
+                                      fill=fill_color, outline=outline_color, width=2, tags='percept')
+                self.canvas.create_text(center_x + x_offset, center_y + y_offset, text=text, 
+                                      fill=text_color, font=('Arial', 6, 'bold'), tags='percept')
+    
+    def add_move_to_history(self, action, position, direction, result=""):
+        """Add a move to the history display"""
+        move_num = len(self.moves_history) + 1
+        
+        move_entry = {
+            'number': move_num,
+            'action': action,
+            'position': position,
+            'direction': direction,
+            'result': result
+        }
+        
+        self.moves_history.append(move_entry)
+        
+        # Format move for display
+        move_text = f"{move_num:2d}. {action:12s} -> ({position[0]},{position[1]})" 
+        if result:
+            move_text += f" | {result}"
+        move_text += "\n"
+        
+        # Add to text widget
+        self.moves_text.insert(tk.END, move_text)
+        self.moves_text.see(tk.END)  # Scroll to bottom
+        
+        # Limit history to last 50 moves to prevent memory issues
+        if len(self.moves_history) > 50:
+            self.moves_history = self.moves_history[-50:]
+            # Clear and reload text widget
+            self.moves_text.delete(1.0, tk.END)
+            for move in self.moves_history:
+                move_text = f"{move['number']:2d}. {move['action']:12s} -> ({move['position'][0]},{move['position'][1]}) {move['direction']} | {move['percepts']}"
+                if move['result']:
+                    move_text += f" | {move['result']}"
+                move_text += "\n"
+                self.moves_text.insert(tk.END, move_text)
     
     def draw_agent(self):
         x, y = self.agent.x, self.agent.y
@@ -272,27 +370,81 @@ class GameBoardUI(tk.Tk):
         self.score_label.config(text=f"Score: {self.agent.score}")
         self.steps_label.config(text=f"Steps: {self.steps}")
         
-        # Update percepts
-        percepts = self.env.get_percepts(self.agent.x, self.agent.y)
-        percept_text = []
-        if percepts['stench']:
-            percept_text.append("Stench")
-        if percepts['breeze']:
-            percept_text.append("Breeze")
-        if percepts['glitter']:
-            percept_text.append("Glitter")
-        if self.env.scream:
-            percept_text.append("Scream")
-            self.env.scream = False  # Reset scream after showing
-            
-        self.percepts_label.config(text=f"Percepts: {', '.join(percept_text) if percept_text else 'None'}")
+        # Reset scream if it was triggered
+        if self.env.get_scream():
+            self.env.reset_scream()  # Reset scream after checking
     
     def single_step(self):
         if self.game_over or not self.agent.alive:
             return
-            
-        continue_game = self.agent.step()
-        self.steps += 1
+        
+        # Record state before action
+        prev_pos = (self.agent.x, self.agent.y)
+        prev_dir = self.agent.dir
+        prev_score = self.agent.score
+        prev_has_gold = self.agent.has_gold
+        prev_can_shoot = self.agent.can_shoot
+        
+        # Get current percepts before action
+        current_percepts = self.env.get_percepts(self.agent.x, self.agent.y)
+        
+        # Capture stdout to get agent's print messages
+        import io
+        import sys
+        old_stdout = sys.stdout
+        sys.stdout = captured_output = io.StringIO()
+        
+        try:
+            # Execute agent step
+            continue_game = self.agent.step()
+            self.steps += 1
+        finally:
+            # Restore stdout
+            sys.stdout = old_stdout
+        
+        # Get the captured output (agent's print messages)
+        agent_messages = captured_output.getvalue().strip()
+        
+        # Determine what action was taken by comparing states
+        new_pos = (self.agent.x, self.agent.y)
+        new_dir = self.agent.dir
+        new_score = self.agent.score
+        new_has_gold = self.agent.has_gold
+        
+        # Use agent's printed message as the action, or fall back to detecting action
+        if agent_messages:
+            action_taken = agent_messages
+        else:
+            # Fallback action detection
+            if new_pos != prev_pos:
+                action_taken = f"Agent moved to ({new_pos[0]}, {new_pos[1]}) facing {new_dir}"
+                if not self.agent.alive:
+                    action_taken += " - Agent died!"
+            elif new_dir != prev_dir:
+                dirs = ['N', 'E', 'S', 'W']
+                prev_idx = dirs.index(prev_dir)
+                new_idx = dirs.index(new_dir)
+                direction_word = 'right' if (new_idx - prev_idx) % 4 == 1 else 'left'
+                action_taken = f"Agent turned {direction_word} to {new_dir}"
+            elif new_has_gold and not prev_has_gold:
+                action_taken = "Agent grabbed the gold!"
+            elif new_score == prev_score - 10:
+                action_taken = "Agent shot" + (" and killed the Wumpus!" if self.env.get_scream() else " but missed.")
+            elif not continue_game and (self.agent.x, self.agent.y) == (0, 0):
+                action_taken = f"Agent climbed out {'with' if self.agent.has_gold else 'without'} the gold!"
+            else:
+                action_taken = "Unknown action"
+        
+        result = ""
+        if not self.agent.alive:
+            result = "DIED!"
+        elif self.agent.has_gold and not prev_has_gold:
+            result = "GOT GOLD!"
+        elif self.env.get_scream():
+            result = "HIT WUMPUS!"
+        
+        # Add move to history with agent's exact message
+        self.add_move_to_history(action_taken, new_pos, new_dir, result)
         
         if not continue_game or not self.agent.alive:
             self.game_over = True
@@ -318,7 +470,6 @@ class GameBoardUI(tk.Tk):
             self.game_running = True
             self.start_button.config(state='disabled')
             self.stop_button.config(state='normal')
-            self.step_button.config(state='disabled')
             self.status_label.config(text="Agent is exploring...")
             self.run_agent()
     
@@ -326,7 +477,6 @@ class GameBoardUI(tk.Tk):
         self.game_running = False
         self.start_button.config(state='normal')
         self.stop_button.config(state='disabled')
-        self.step_button.config(state='normal')
         self.status_label.config(text="Agent stopped")
     
     def reset_game(self):
@@ -335,9 +485,10 @@ class GameBoardUI(tk.Tk):
         self.agent = RandomAgent(self.env)
         self.game_over = False
         self.steps = 0
+        self.moves_history = []  # Clear moves history
+        self.moves_text.delete(1.0, tk.END)  # Clear moves display
         self.status_label.config(text="Game Reset - Click Start Agent to begin")
         self.start_button.config(state='normal')
-        self.step_button.config(state='normal')
         self.draw_board()
         self.update_display()
     
