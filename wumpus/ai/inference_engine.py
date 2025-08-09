@@ -1,7 +1,6 @@
 from typing import List, Dict, Optional
 from .rules_parser import LogicParser, Predicate, Not, And, Or, Implies, LogicExpr
 from .knowledge_base import Fact, KnowledgeBase
-import random
 import re
 
 class InferenceEngine:
@@ -150,31 +149,61 @@ class InferenceEngine:
             return Implies(self.substitute(expr.left, subs), self.substitute(expr.right, subs))
         return expr
 
-    def unify(self, fact: Predicate, rule: LogicExpr) -> Optional[Dict[str, str]]:
+    def unify(self, fact: LogicExpr, rule: LogicExpr) -> Optional[Dict[str, str]]:
         """
-        Unify a grounded fact with a rule (which may contain variables).
+        Unify a grounded fact (which may be any logic expression: Predicate, Not, And, Or) with the left side of a rule (which may be any logic expression).
         Returns a dict of substitutions if successful, else None.
-        Currently can only unify fact with a fact. Or a fact with an implies. 
+        Handles Implies with any logic expression on the left.
         """
-        def _unify_predicates(fact_pred: Predicate, rule_pred: Predicate) -> Optional[Dict[str, str]]:
-            if fact_pred.name != rule_pred.name or len(fact_pred.args) != len(rule_pred.args):
-                return None
-            subs = {}
-            for f_arg, r_arg in zip(fact_pred.args, rule_pred.args):
-                if r_arg.isidentifier():  # variable
-                    subs[r_arg] = f_arg
-                elif r_arg != f_arg:
+        def _unify_expr(fact: LogicExpr, expr: LogicExpr) -> Optional[Dict[str, str]]:
+            if isinstance(fact, Predicate) and isinstance(expr, Predicate):
+                if fact.name != expr.name or len(fact.args) != len(expr.args):
                     return None
-            return subs
+                subs = {}
+                for f_arg, r_arg in zip(fact.args, expr.args):
+                    if r_arg.isidentifier():  # variable
+                        subs[r_arg] = f_arg
+                    elif r_arg != f_arg:
+                        return None
+                return subs
+            elif isinstance(fact, Not) and isinstance(expr, Not):
+                return _unify_expr(fact.expr, expr.expr)
+            elif isinstance(fact, And) and isinstance(expr, And):
+                left = _unify_expr(fact.left, expr.left)
+                if left is not None:
+                    right = _unify_expr(fact.right, expr.right)
+                    if right is not None:
+                        merged = left.copy()
+                        merged.update(right)
+                        return merged
+                return None
+            elif isinstance(fact, Or) and isinstance(expr, Or):
+                left = _unify_expr(fact.left, expr.left)
+                if left is not None:
+                    right = _unify_expr(fact.right, expr.right)
+                    if right is not None:
+                        merged = left.copy()
+                        merged.update(right)
+                        return merged
+                return None
+            # Allow matching fact with sub-expressions of expr (for Implies, And, Or, Not)
+            elif isinstance(expr, (And, Or)):
+                left = _unify_expr(fact, expr.left)
+                if left is not None:
+                    return left
+                return _unify_expr(fact, expr.right)
+            elif isinstance(expr, Not):
+                return _unify_expr(fact, expr.expr)
+            return None
 
-        # Only unify with the left side of Implies
-        if isinstance(rule, Implies) and isinstance(rule.left, Predicate):
-            subs = _unify_predicates(fact, rule.left)
+        # Unify with the left side of Implies, which can be any logic expression
+        if isinstance(rule, Implies):
+            subs = _unify_expr(fact, rule.left)
             if subs is not None:
                 substituted_rule = self.substitute(rule, subs)
                 return subs, substituted_rule
-        elif isinstance(rule, Predicate):
-            subs = _unify_predicates(fact, rule)
+        else:
+            subs = _unify_expr(fact, rule)
             if subs is not None:
                 substituted_rule = self.substitute(rule, subs)
                 return subs, substituted_rule
@@ -216,8 +245,10 @@ def test_unify():
     engine = InferenceEngine(None)
     parser = LogicParser()
     fact = parser.parse("fact(1,2)")
-    rule = parser.parse("fact(x,y) => derived(x+1,y)")
-    result = engine.unify(fact, rule)
+
+    fact2 = parser.parse("!Breeze(1,2)")
+    rule = parser.parse("!Breeze(x,y) => !Pit(x+1,y) & !Pit(x-1,y) & !Pit(x,y+1) & !Pit(x,y-1)")
+    result = engine.unify(fact2, rule)
     print('Unify result:', result[0] if result else None)
     print('Substituted rule:', result[1] if result else None)
 
@@ -232,7 +263,7 @@ def test_unify_math():
     print('Substituted rule:', result[1] if result else None)
 
 if __name__ == "__main__": 
-    test_model_check_probability()
+    # test_model_check_probability()
     # test_eval_expr()
     # test_unify()
     # test_unify_math()

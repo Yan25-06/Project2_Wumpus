@@ -2,7 +2,7 @@ from .rules_parser import LogicExpr, LogicParser, Predicate, Not, And, Or, Impli
 from typing import Union
 
 
-Fact = Predicate
+Fact = LogicExpr
 
 class KnowledgeBase:
     def __init__(self):
