@@ -2,6 +2,7 @@ from typing import List, Dict, Optional
 from .rules_parser import LogicParser, Predicate, Not, And, Or, Implies, LogicExpr
 from .knowledge_base import Fact, KnowledgeBase
 import random
+import re
 
 class InferenceEngine:
     def __init__(self, kb: KnowledgeBase, debug: bool = False):
@@ -114,11 +115,69 @@ class InferenceEngine:
 
         return prob
 
+    def _eval_math(self, expr: str, subs: Dict[str, str]) -> str:
+        # basic maths, no parentheses
+        """
+        Evaluate simple math expressions in predicate arguments using substitutions.
+        E.g., 'x+1' with subs={'x': '1'} => '2'
+        """
+        try:
+            # Replace variables in expr with their values
+            for k, v in subs.items():
+                expr = expr.replace(k, v)
+            # Only allow digits and math operators
+            if re.match(r'^[0-9+\-*/ ]+$', expr):
+                return str(eval(expr))
+            return expr
+        except Exception:
+            return expr
 
+    def substitute(self, expr: LogicExpr, subs: Dict[str, str]) -> LogicExpr:
+        """
+        Substitute variables in LogicExpr, evaluating math in predicate args.
+        """
+        if isinstance(expr, Predicate):
+            new_args = [self._eval_math(arg, subs) for arg in expr.args]
+            return Predicate(expr.name, new_args)
+        elif isinstance(expr, Not):
+            return Not(self.substitute(expr.expr, subs))
+        elif isinstance(expr, And):
+            return And(self.substitute(expr.left, subs), self.substitute(expr.right, subs))
+        elif isinstance(expr, Or):
+            return Or(self.substitute(expr.left, subs), self.substitute(expr.right, subs))
+        elif isinstance(expr, Implies):
+            return Implies(self.substitute(expr.left, subs), self.substitute(expr.right, subs))
+        return expr
 
+    def unify(self, fact: Predicate, rule: LogicExpr) -> Optional[Dict[str, str]]:
+        """
+        Unify a grounded fact with a rule (which may contain variables).
+        Returns a dict of substitutions if successful, else None.
+        Currently can only unify fact with a fact. Or a fact with an implies. 
+        """
+        def _unify_predicates(fact_pred: Predicate, rule_pred: Predicate) -> Optional[Dict[str, str]]:
+            if fact_pred.name != rule_pred.name or len(fact_pred.args) != len(rule_pred.args):
+                return None
+            subs = {}
+            for f_arg, r_arg in zip(fact_pred.args, rule_pred.args):
+                if r_arg.isidentifier():  # variable
+                    subs[r_arg] = f_arg
+                elif r_arg != f_arg:
+                    return None
+            return subs
 
-
-
+        # Only unify with the left side of Implies
+        if isinstance(rule, Implies) and isinstance(rule.left, Predicate):
+            subs = _unify_predicates(fact, rule.left)
+            if subs is not None:
+                substituted_rule = self.substitute(rule, subs)
+                return subs, substituted_rule
+        elif isinstance(rule, Predicate):
+            subs = _unify_predicates(fact, rule)
+            if subs is not None:
+                substituted_rule = self.substitute(rule, subs)
+                return subs, substituted_rule
+        return None
 
 def test_eval_expr():
     kb = KnowledgeBase()
@@ -145,15 +204,37 @@ def test_get_unknown():
 def test_model_check_probability():
     kb = KnowledgeBase()
     kb.add_fact("Breeze(1,1)")
-    kb.add_rule("Breeze(1,1) => Pit(2,1) | Pit(0,1) | Pit(1,2) | Pit(1,0)")
+    kb.add_rule("Breeze(x,y) => Pit(x+1,y) | Pit(x-1,y) | Pit(x,y+1) | Pit(x,y-1)")
     engine = InferenceEngine(kb, debug=True)
     probability = engine.model_check_probability("Pit(1,2)")
     print(f"Probability of 'Pit(1,2)' being true: {probability}") # 0.5333
 
 
+def test_unify():
+    from .rules_parser import Predicate, Implies
+    engine = InferenceEngine(None)
+    parser = LogicParser()
+    fact = parser.parse("fact(1,2)")
+    rule = parser.parse("fact(x,y) => derived(x+1,y)")
+    result = engine.unify(fact, rule)
+    print('Unify result:', result[0] if result else None)
+    print('Substituted rule:', result[1] if result else None)
+
+def test_unify_math():
+    from .rules_parser import LogicParser
+    engine = InferenceEngine(None)
+    parser = LogicParser()
+    fact = parser.parse("fact(1,2)")
+    rule = parser.parse("fact(x,y) => derived(x+1,y)")
+    result = engine.unify(fact, rule)
+    print('Unify result:', result[0] if result else None)
+    print('Substituted rule:', result[1] if result else None)
+
 if __name__ == "__main__": 
-    test_model_check_probability()
+    # test_model_check_probability()
     # test_eval_expr()
+    test_unify()
+    test_unify_math()
     pass
 
 def main():
