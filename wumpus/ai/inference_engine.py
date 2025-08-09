@@ -58,61 +58,62 @@ class InferenceEngine:
         if isinstance(query, Predicate) and query in self.kb.facts:
             return 1.0
 
-        # step 2 extract unknown symbols 
-        unknown_symbols = self.get_unknown_symbols()
+        # step 2: ground rules using known facts
+        grounded_rules = []
+        for rule in self.kb.rules:
+            if isinstance(rule, Implies):
+                for fact in self.kb.facts:
+                    unify_result = self.unify(fact, rule)
+                    if unify_result:
+                        subs, grounded_rule = unify_result
+                        grounded_rules.append(grounded_rule)
+            elif isinstance(rule, Predicate):
+                for fact in self.kb.facts:
+                    unify_result = self.unify(fact, rule)
+                    if unify_result:
+                        subs, grounded_rule = unify_result
+                        grounded_rules.append(grounded_rule)
+            # Extend for And/Or/Not if needed
+
+        if self.debug:
+            print(f"Debug: Grounded rules from known facts: {grounded_rules}")
+
+        # step 3 extract unknown symbols from grounded rules
+        all_symbols = set()
+        for gr in grounded_rules:
+            if isinstance(gr, Predicate):
+                all_symbols.add(gr)
+            elif isinstance(gr, (And, Or, Implies, Not)):
+                all_symbols.update(self.kb._flatten_logic_expr(gr))
+        unknown_symbols = [s for s in all_symbols if s not in self.kb.facts]
 
         if self.debug:
             print(f"Debug: Unknown symbols for query '{query}': {unknown_symbols}")
 
-        # step 3 recursively handle unknown symbols, trying all combinations of truth values
-
         kb_true_count = 0
         query_true_count = 0
 
-        def model_check_recursive(unknown_symbols: List[str], query: LogicExpr, model: list[Fact]) -> float: 
-            nonlocal kb_true_count 
-            nonlocal query_true_count 
-
-            # base case: no unkown symbols left 
+        def model_check_recursive(unknown_symbols: List[str], query: LogicExpr, model: list[Fact]) -> float:
+            nonlocal kb_true_count
+            nonlocal query_true_count
             if len(unknown_symbols) == 0:
-                if self.is_model_satisfied(self.kb.rules,model): 
-                    if self.debug:
-                        print(f"Debug: Found satisfied model {model} for KB")
+                if self.is_model_satisfied(grounded_rules, model):
                     kb_true_count += 1
-                    if self.is_model_satisfied([query], model): 
-                        if self.debug:
-                            print(f"Debug: Found satisfied model {model} for query {query}")
+                    if self.is_model_satisfied([query], model):
                         query_true_count += 1
                 return
-
-            # generate next symbol with different truth values to try
-            next_symbol = unknown_symbols[0] 
+            next_symbol = unknown_symbols[0]
             for truth_value in [True, False]:
                 new_model = model.copy()
                 if truth_value:
                     new_model.append(next_symbol)
-                # false = absence of the symbol
                 else:
                     if next_symbol in new_model:
-                        new_model.remove(next_symbol)   
-
-                # recursively check the rest of the unknown symbols
+                        new_model.remove(next_symbol)
                 model_check_recursive(unknown_symbols[1:], query, new_model)
-            
-            if self.debug:
-                if kb_true_count == 0: 
-                    print(f"Debug: No valid models found for {unknown_symbols} with query {query}")
-                else: 
-                    print(f"Debug: Found {query_true_count} valid query models, with {kb_true_count} kb valid models for {unknown_symbols} with query {query}")
-
-
             return query_true_count / kb_true_count if kb_true_count > 0 else 0.5
 
-        if self.debug:
-            print(f"Debug: Starting model checking for query '{query}' with unknown symbols {unknown_symbols} and facts {self.kb.facts}")
         prob = model_check_recursive(unknown_symbols, query, self.kb.facts)
-
-
         return prob
 
     def _eval_math(self, expr: str, subs: Dict[str, str]) -> str:
@@ -231,10 +232,10 @@ def test_unify_math():
     print('Substituted rule:', result[1] if result else None)
 
 if __name__ == "__main__": 
-    # test_model_check_probability()
+    test_model_check_probability()
     # test_eval_expr()
-    test_unify()
-    test_unify_math()
+    # test_unify()
+    # test_unify_math()
     pass
 
 def main():
