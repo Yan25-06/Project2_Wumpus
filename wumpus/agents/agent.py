@@ -70,17 +70,12 @@ class Agent(ABC):
         
         self.move_forward()
 
-
     def grab_gold(self):
-        percept = self.env.get_percepts(self.x, self.y)
-        if percept['glitter']:
-            self.has_gold = True
-            self.score += 10
-            self.env.grabbed_gold()
-            self.env.set_safe(self.x, self.y)
-            print("Agent grabbed the gold!")
-            return True
-        return False
+        self.has_gold = True
+        self.score += 10
+        self.env.grabbed_gold()
+        self.env.set_safe(self.x, self.y)
+        print("Agent grabbed the gold!")
     
     def climb_out(self):
         if self.has_gold:
@@ -92,11 +87,13 @@ class Agent(ABC):
     def shoot(self):
         if not self.can_shoot:
             print("Agent cannot shoot again yet!")
-            return
+            return False
         self.score -= 10
         self.can_shoot = False
         
         if self.env.shot_wumpus():
             print("Agent killed the Wumpus!")
+            return True
         else:
             print("Agent shot but missed.")
+            return False

@@ -3,10 +3,8 @@ from heapdict import heapdict
 from ..config.settings import DIRECTIONS, DIRECTION_VECTORS
 
 class PlanningModule:
-    def __init__(self, safe_cells, cur_pos, cur_dir):
-        self.start_pos = cur_pos  
-        self.start_dir = cur_dir  
-        self.space = safe_cells   
+    def __init__(self): 
+        self.space = {(0,0)} 
         self.solution = []       
 
     def heuristic(self, pos, goal):
@@ -22,8 +20,8 @@ class PlanningModule:
 
         return 1 if desired_dir == cur_dir else 2
 
-    def set_safe_cell(self, cell):
-        self.space = cell
+    def add_safe_cell(self, cell):
+        self.space.add(cell)
 
     def _get_next_pos(self, cur_pos):
         # Adjacent moves in 4 directions
@@ -37,18 +35,18 @@ class PlanningModule:
             path.append(current)
             current = came_from[current]
         path.reverse()
+        path = path[1:]
         return path
 
-    def find_route(self, goal):
+    def find_route(self, start, goal, start_dir):
         open_set = heapdict()
         came_from = {}
         g_score = {}
         directions_map = {}
 
-        start = self.start_pos
         g_score[start] = 0
         open_set[start] = self.heuristic(start, goal)
-        directions_map[start] = self.start_dir
+        directions_map[start] = start_dir
 
         visited = set()
 
@@ -83,4 +81,4 @@ class PlanningModule:
                             directions_map[neighbor] = d
                             break
 
-        return []  
+        return None 

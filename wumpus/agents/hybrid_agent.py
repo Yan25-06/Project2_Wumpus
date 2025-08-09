@@ -1,104 +1,168 @@
 from ..agents.agent import Agent
+from ..ai.inference_engine import InferenceEngine, KnowledgeBase
+from ..ai.planning_module import PlanningModule
+from heapdict import heapdict
+from heapq import heappush, heappop
+from ..config.settings import DIRECTIONS, DIRECTION_VECTORS
 
 class HybridAgent(Agent):
-    def __init__(self, env):
+    def __init__(self, env, kb: KnowledgeBase, ie: InferenceEngine, pm: PlanningModule):
         super().__init__(env)
-     
+        self.kb = kb
+        self.ie = ie
+        self.pm = pm
+
+        self.can_hunt = False
+        self.aimed_wumpus = (-1, -1)
+
+        self.visited = set()
+        self.route = []
+
+        self.wumpus_at = []
+        self.wumpus_prob: dict[tuple, float]
+        self.pit_prob: dict[tuple, float]
+        self.cell_prob = heapdict() # 0: safe 1: die
+
+    def update_kb_and_cell_prob(self,percepts):
+        adj = [(self.x+1, self.y), (self.x-1, self.y), (self.x, self.y+1), (self.x, self.y-1)]
+        if (percepts["stench"]):
+            self.kb.update_kb(f"Stench({self.x}, {self.y})")
+            for cell in adj:
+                if (cell not in self.cell_prob or (self.cell_prob[cell] > 0 and self.cell_prob[cell] < 1)):
+                    self.wumpus_prob[cell] = self.ie.model_check_probability(f"Wumpus({self.x}, {self.y})")
+                    if self.wumpus_prob[cell] == 1:
+                        self.can_hunt = True
+                        if cell not in self.wumpus_at:
+                            self.wumpus_at.append(cell)
+
+        if (percepts["breeze"]):
+            self.kb.update_kb(f"Breeze({self.x}, {self.y})")
+            for cell in adj:
+                if (cell not in self.cell_prob or 0 < self.cell_prob[cell] < 1):
+                    self.pit_prob[cell] = self.ie.model_check_probability(f"Pit({self.x}, {self.y})")
+
+        for cell in adj:
+            if (cell in self.wumpus_prob and cell in self.pit_prob):
+                self.cell_prob[cell] = 1 - (1 - self.wumpus_prob[cell]) * (1 - self.pit_prob[cell])
+            elif (cell in self.wumpus_prob):
+                self.cell_prob[cell] = self.wumpus_prob[cell]
+            elif (cell in self.pit_prob):
+                self.cell_prob[cell] = self.pit_prob[cell]
+            if (self.cell_prob[cell] == 0):
+                self.pm.add_safe_cell(cell)
+
+    def add_adj_as_safe_cell(self):
+        adj = [(self.x+1, self.y), (self.x-1, self.y), (self.x, self.y+1), (self.x, self.y-1)]
+        for cell in adj:
+            if (cell not in self.cell_prob or 0 < self.cell_prob[cell] < 1):
+                self.cell_prob[cell] = 0
+                self.pm.add_safe_cell(cell)
+
+    def get_nearest_notvisited_safe_cell(self):
+        current_pos = (self.x, self.y)
+        candidates = [cell for cell in self.pm.space if cell not in self.visited]
+        if not candidates:
+            return None
+        return min(candidates, key=lambda cell: abs(cell[0] - current_pos[0]) + abs(cell[1] - current_pos[1]))
+
+    def find_shoot_path(self):
+        current_pos = (self.x, self.y)
+
+        sorted_wumpus = sorted(self.wumpus_at, key=lambda w: self.pm.heuristic(w, current_pos))
+
+        for wumpus in sorted_wumpus:
+            self.aimed_wumpus = wumpus
+            wx, wy = wumpus
+            shoot_candidates = []
+            n = self.env.get_size()
+            for x in range(n):  
+                if (x, wy) in self.pm.space and (x, wy) != wumpus:
+                    heappush(shoot_candidates, (self.pm.heuristic(current_pos, (x, wy)), (x, wy)))
+
+            for y in range(n):
+                if (wx, y) in self.pm.space and (wx, y) != wumpus:
+                    heappush(shoot_candidates, (self.pm.heuristic(current_pos, (wx, y)), (wx, y)))
+
+            while shoot_candidates:
+                shoot_pos,_ = heappop(shoot_candidates)
+                path = self.pm.find_route((self.x, self.y), shoot_pos, self.dir)
+                if path: 
+                    return path
+
+        return None  
+
+    def turn_to_shoot_dir(self):
+        wx, wy = self.aimed_wumpus
+        ax, ay = self.x, self.y
+
+        if ax == wx:
+            if wy > ay:
+                target_dir = 'E'
+            else:
+                target_dir = 'W'
+        elif ay == wy:
+            if wx > ax:
+                target_dir = 'S'
+            else:
+                target_dir = 'N'
+        else:
+            return False
+        
+        current_idx = DIRECTIONS.index(self.dir)
+        target_idx = DIRECTIONS.index(target_dir)
+        diff = (target_idx - current_idx) % 4
+
+        if diff == 1:
+            self.turn_right()
+        elif diff == 2:
+            self.turn_right()
+            self.turn_right()
+        elif diff == 3:
+            self.turn_left()
+        return True
+
 
     def step(self):
         if not self.alive:
             return False
-        if self.grab_gold():
+        percepts = self.env.get_percepts()
+        if percepts["glitter"]:
+            self.grab_gold()
+            self.route = self.pm.find_route((0,0))
+        if self.has_gold and self.x == 0 and self.y == 0: # has gold and at exit
+            return False
+        if not percepts["stench"] and not percepts["breeze"]:
+            self.add_adj_as_safe_cell()
+        else:
+            self.update_kb_and_cell_prob(percepts)
+        if len(self.route == 0):
+            if self.aimed_wumpus != (-1, -1):
+                shoot = self.turn_to_shoot_dir()
+                if not shoot:
+                    print("Tinh sai vi tri ban roi m")
+                wumpus_die = self.shoot()
+                if wumpus_die:
+                    self.wumpus_at.remove(self.aimed_wumpus)
+                    self.wumpus_prob[self.aimed_wumpus] = 0
+                    self.cell_prob[self.aimed_wumpus] = 0
+                    self.kb.add_fact(f"!Wumpus({self.x}, {self.y})")
+                    self.pm.add_safe_cell(self.aimed_wumpus)
+                self.aimed_wumpus = (-1, -1)
+            cell = self.get_nearest_notvisited_safe_cell()
+            if cell:
+                self.route = self.pm.find_route((self.x, self.y), cell, self.dir)
+            elif self.can_hunt and self.can_shoot:
+                hunt_plan = self.find_shoot_path()
+                if len(hunt_plan) > 0:
+                    self.route = hunt_plan
+            else:
+                goal, die_prob = self.cell_prob.popitem()
+                if (die_prob < 1):
+                    self.route = self.pm.find_route(goal)
+        if (len(self.route) > 0):
+            self.move_to_pos(self.route[0])
+            self.visited.add(self.route[0])
+            self.route = self.route[:1]
             return True
-        # Kết hợp inference engine và planning module
-        return True
-
-
-# from ..agents.agent import Agent
-# from .inference_engine import InferenceEngine, KnowledgeBase
-
-# # Implement A* or other planning algorithms here
-# class PlanningModule: 
-
-#     def __init__(self, kb: KnowledgeBase, ie: InferenceEngine): 
-#         self.kb = kb 
-#         self.ie = ie
-
-    
-
-#     # Main method to run per step
-#     def step(self):
-#         # 1. Get percepts (breeze, stench, scream, etc.)
-#         percepts = self.get_percepts()  
-        
-#         # 2. Update KB with new facts (no probabilities)
-#         self.kb.update_kb(percepts)  
-        
-#         # 3. Decide action (no model checking)
-#         action = self.decide_action()  
-        
-#         # 4. Execute
-#         self.execute(action)
-
-#     def execute(self, action):
-#         pass 
-
-#     def update_kb(self, percepts):
-#         x, y = self.position
-
-#         # Add immediate facts
-#         if percepts.get('breeze'):
-#             self.kb.add_fact(f"Breeze({x},{y})")
-
-#         # Similar for stench/Wumpus
-
-#     def decide_action(self): 
-#         # 0. If current cell has gold, pick it up, return to exit
-#         # 1. Check adjacent cells for safety, use is_safe() 
-
-#         # 2. If exists a safe cell, pick one to move to 
-#         # 3. If all cell are unsafe, decide to shoot or retreat or randomly moveforward 
-
- 
-#         pass 
-#         # Below is example, adapt to current project
-#         # x, y = self.position
-        
-#         # # A. Check adjacent cells 
-#         # safe_adjacent = []
-#         # for (dx, dy) in [(1,0), (-1,0), (0,1), (0,-1)]:
-#         #     nx, ny = x + dx, y + dy
-#         #     if self.is_safe(nx, ny):  # Uses KB to check if "not pit(nx,ny)" is entailed
-#         #         safe_adjacent.append((nx, ny))
-        
-#         # # B. Prioritize:
-#         # if self.has_gold: 
-#         #     return self.find_path_to_exit()
-#         # elif safe_adjacent:
-#         #     return self.move_to(safe_adjacent[0])  # Go to nearest safe cell
-#         # else:
-#         #     # shoot or retreat or move forward randomly
-#         #     return self.shoot_or_retreat()  # Last resort
-
-
-
-#     def is_safe(self, x, y):
-#         """Uses model checking to check safety"""
-#         # Your existing model checking logic here
-
-#         # Returns True if both:
-#         # 1. "not Pit({x},{y})" is derivable
-#         # 2. "not Wumpus({x},{y})" is derivable
-#         prob_no_pit = self.ie.model_check_probability(f"!Pit({x},{y})")  
-#         prob_no_wumpus = self.ie.model_check_probability(f"!Wumpus({x},{y})")  
-
-#         if prob_no_pit == 1.0 and prob_no_wumpus == 1.0:
-#             return 1 # 100% safe example
-
-        
-#         # more in depth configuration here
-#         # may be a dict
-#         # { 
-#         #     "prob_no_pit": prob_no_pit,
-#         #     "prob_no_wumpus": prob_no_wumpus,
-#         #}
+        else:
+            return False
