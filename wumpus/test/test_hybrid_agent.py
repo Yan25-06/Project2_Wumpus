@@ -98,11 +98,12 @@ def test_find_route_from_A_to_B():
 
 
 if __name__ == "__main__":
-    a1 = test_step() 
-    a2 = test_step(a1)
-    a3 = test_step(a2)
-    a4 = test_step(a3)
-    a5 = test_step(a4)
+    a = test_step()  
+    step = 1
+    while a.alive and step <= 20:
+        a = test_step(a)
+        step += 1
+
     
     
     # test_find_route_from_A_to_B()

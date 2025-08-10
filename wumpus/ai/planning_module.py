@@ -79,7 +79,7 @@ class PlanningModule:
                             directions_map[neighbor] = d
                             break
 
-        return None 
+        return None, None
     def get_nearest_goal_route(self, start, goals, start_dir):
         cur_route = []
         cur_goal = (-1, -1)

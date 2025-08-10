@@ -66,6 +66,7 @@ class HybridAgent(Agent):
             for cell in adj:
                 if (cell not in self.cell_prob or 0 < self.cell_prob[cell] < 1):
                     self.wumpus_prob[cell] = self.ie.model_check_probability(f"Wumpus({self.x}, {self.y})")
+                    print(self.wumpus_prob[cell])
                     if self.wumpus_prob[cell] == 1:
                         self.can_hunt = True
                         if cell not in self.wumpus_at:
@@ -76,6 +77,7 @@ class HybridAgent(Agent):
             for cell in adj:
                 if (cell not in self.cell_prob or 0 < self.cell_prob[cell] < 1):
                     self.pit_prob[cell] = self.ie.model_check_probability(f"Pit({self.x}, {self.y})")
+                    print(self.pit_prob[cell])
 
         for cell in adj:
             if (cell in self.wumpus_prob and cell in self.pit_prob):
@@ -88,7 +90,6 @@ class HybridAgent(Agent):
                 self.pm.add_safe_cell(cell)
             if (cell in self.cell_prob and 0 < self.cell_prob[cell] < 1):
                 self.uncertain_cell[cell] = self.cell_prob[cell]
-            # print(f"{cell}: {self.cell_prob[cell]}")
 
     def add_adj_as_safe_cell(self):
         n = self.env.get_size()
@@ -112,12 +113,12 @@ class HybridAgent(Agent):
         current_pos = (self.x, self.y)
         candidates = [cell for cell in self.pm.space if cell not in self.visited]
         if not candidates:
-            return None
+            return None, None
 
         goal, path = self.pm.get_nearest_goal_route(current_pos, candidates, self.dir)
         if (goal != (-1, -1)):
             return goal, path
-        return None
+        return None, None
     
     def get_aimed_wumpus(self, is_at):
         x, y = is_at
@@ -145,7 +146,7 @@ class HybridAgent(Agent):
         if (goal != (-1, -1)):
             self.aimed_wumpus = self.get_aimed_wumpus(goal)
             return goal, path
-        return None  
+        return None, None
 
     def turn_to_shoot_dir(self):
         wx, wy = self.aimed_wumpus
