@@ -1,5 +1,6 @@
 from ..agents.agent import Agent
 from ..ai.inference_engine import InferenceEngine, KnowledgeBase
+from ..core.environment import Environment
 from ..ai.planning_module import PlanningModule
 from heapdict import heapdict
 from heapq import heappush, heappop
@@ -26,10 +27,12 @@ class HybridAgent(Agent):
             print(f"Error initializing knowledge base: {e}")
         pass 
 
-    def __init__(self, env, kb: KnowledgeBase, ie: InferenceEngine, pm: PlanningModule):
+    def __init__(self, env: Environment, kb: KnowledgeBase, ie: InferenceEngine, pm: PlanningModule, debug = False):
         super().__init__(env)
 
         self.init_kb(kb)
+
+        self.debug = debug
         
 
         self.ie = ie
@@ -147,24 +150,38 @@ class HybridAgent(Agent):
 
     def step(self):
         if not self.alive:
+            if self.debug:
+                print("[DEBUG] Agent is not alive. Returning False.")
             return False
-        percepts = self.env.get_percepts()
+        percepts = self.env.get_percepts(self.x, self.y)
         if percepts["glitter"]:
+            if self.debug:
+                print("[DEBUG] Glitter detected. Grabbing gold and planning route to exit.")
             self.grab_gold()
             self.route = self.pm.find_route((0,0))
         if self.has_gold and self.x == 0 and self.y == 0: # has gold and at exit
+            if self.debug:
+                print("[DEBUG] Agent has gold and is at exit. Returning False.")
             return False
         if not percepts["stench"] and not percepts["breeze"]:
+            if self.debug:
+                print("[DEBUG] No stench or breeze. Adding adjacent cells as safe.")
             self.add_adj_as_safe_cell()
         else:
+            if self.debug:
+                print(f"[DEBUG] Percepts: {percepts}. Updating KB and cell probabilities.")
             self.update_kb_and_cell_prob(percepts)
-        if len(self.route == 0):
+        if len(self.route) == 0:
             if self.aimed_wumpus != (-1, -1):
+                if self.debug:
+                    print(f"[DEBUG] Aimed Wumpus at {self.aimed_wumpus}. Turning to shoot direction.")
                 shoot = self.turn_to_shoot_dir()
                 if not shoot:
                     print("Tinh sai vi tri ban roi m")
                 wumpus_die = self.shoot()
                 if wumpus_die:
+                    if self.debug:
+                        print(f"[DEBUG] Wumpus at {self.aimed_wumpus} killed. Updating KB and probabilities.")
                     self.wumpus_at.remove(self.aimed_wumpus)
                     self.wumpus_prob[self.aimed_wumpus] = 0
                     self.cell_prob[self.aimed_wumpus] = 0
@@ -174,22 +191,37 @@ class HybridAgent(Agent):
             cell = self.get_nearest_notvisited_safe_cell()
             if cell:
                 self.route = self.pm.find_route((self.x, self.y), cell, self.dir)
+                if self.debug:
+                    print(f"[DEBUG] Nearest not visited safe cell: {cell}. Advancing there, found route: {self.route}.")
             elif self.can_hunt and self.can_shoot:
+                if self.debug:
+                    print("[DEBUG] Can hunt and shoot. Finding shoot path.")
                 hunt_plan = self.find_shoot_path()
-                if len(hunt_plan) > 0:
+                if hunt_plan and len(hunt_plan) > 0:
                     self.route = hunt_plan
             else:
                 goal, die_prob = self.cell_prob.popitem()
+                if self.debug:
+                    print(f"[DEBUG] No safe route. Popping cell {goal} with die_prob {die_prob}.")
                 if (die_prob < 1):
                     self.route = self.pm.find_route(goal)
+        else:
+            if self.debug:
+                print(f"[DEBUG] Route available: {self.route}. Moving to next position.")
         if (len(self.route) > 0):
+            if self.debug:
+                print(f"[DEBUG] Moving to position {self.route[0]}. Marking as visited.")
             self.move_to_pos(self.route[0])
             self.visited.add(self.route[0])
             self.route = self.route[:1]
+            if self.debug:
+                print("[DEBUG] Step completed. Returning True.")
             return True
         else:
+            if self.debug:
+                print("[DEBUG] No route available. Returning False.")
             return False
 
 
 if __name__ == "__main__":
-    pass 
+    pass

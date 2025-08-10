@@ -1,4 +1,3 @@
-from ..agents.agent import Agent
 from heapdict import heapdict
 from ..config.settings import DIRECTIONS, DIRECTION_VECTORS
 
@@ -35,7 +34,7 @@ class PlanningModule:
             path.append(current)
             current = came_from[current]
         path.reverse()
-        path = path[1:]
+        # path = path[1:]
         return path
 
     def find_route(self, start, goal, start_dir):
