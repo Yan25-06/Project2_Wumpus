@@ -11,6 +11,8 @@ class Agent(ABC):
         self.can_shoot = True
         self.alive = True
         self.score = 0
+        # Mark starting position as visited
+        self.env.mark_visited(self.x, self.y)
 
     @abstractmethod
     def step(self) -> bool:
@@ -39,6 +41,7 @@ class Agent(ABC):
         if 0 <= nx < self.env.get_size() and 0 <= ny < self.env.get_size():
             self.x, self.y = nx, ny
             self.env.set_agent_pos_and_dir(self.x, self.y, self.dir)
+            self.env.mark_visited(self.x, self.y)  # Mark new cell as visited
             print(f"Agent moved to ({self.x}, {self.y}) facing {self.dir}")
             if self.env.has_pit(self.x, self.y) or self.env.has_wumpus(self.x, self.y):
                 print("Agent died!")

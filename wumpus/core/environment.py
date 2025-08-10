@@ -5,7 +5,9 @@ class Cell:
         self.has_wumpus = False
         self.has_pit = False
         self.has_gold = False
+        self.visited = False
         self.safe = None  # True / False / None (unknown)
+        self.percepts = {'stench': False, 'breeze': False, 'glitter': False}  # Store percepts when visited
 
 class Environment:
     def __init__(self, N=8, K=2, pit_prob=0.2):
@@ -55,6 +57,10 @@ class Environment:
         return self.__agent_dir
     def get_scream(self):
         return self.__scream
+    
+    def reset_scream(self):
+        self.__scream = False
+        
     def get_size(self):
         return self.__N
     
@@ -103,6 +109,30 @@ class Environment:
         if 0 <= x < self.__N and 0 <= y < self.__N:
             return self.__grid[y][x].has_wumpus
         return False
+    
+    def has_gold(self, x, y):
+        if 0 <= x < self.__N and 0 <= y < self.__N:
+            return self.__grid[y][x].has_gold
+        return False
+    
+    def is_visited(self, x, y):
+        if 0 <= x < self.__N and 0 <= y < self.__N:
+            return self.__grid[y][x].visited
+        return False
+    
+    def mark_visited(self, x, y):
+        if 0 <= x < self.__N and 0 <= y < self.__N:
+            self.__grid[y][x].visited = True
+            # Store percepts for this cell when visited
+            percepts = self.get_percepts(x, y)
+            self.__grid[y][x].percepts = percepts
+    
+    def get_cell_percepts(self, x, y):
+        """Get the stored percepts for a visited cell"""
+        if 0 <= x < self.__N and 0 <= y < self.__N and self.__grid[y][x].visited:
+            return self.__grid[y][x].percepts
+        return {'stench': False, 'breeze': False, 'glitter': False}
+    
     def get_percepts(self, x, y):
         stench = breeze = glitter = False
         for dx, dy in [(-1,0), (1,0), (0,-1), (0,1)]:
