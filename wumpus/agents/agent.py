@@ -1,9 +1,10 @@
 from abc import ABC, abstractmethod
+from ..core.environment import Environment
 from ..config.settings import DIRECTIONS, DIRECTION_VECTORS
 # Agent base class for Wumpus World
 # This class defines the basic structure and methods that all agents must implement.
 class Agent(ABC):
-    def __init__(self, env):
+    def __init__(self, env: Environment):
         self.env = env
         self.x, self.y = env.get_agent_pos()
         self.dir = env.get_agent_dir()

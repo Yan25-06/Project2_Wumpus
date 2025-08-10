@@ -1,4 +1,3 @@
-from ..agents.agent import Agent
 from heapdict import heapdict
 from ..config.settings import DIRECTIONS, DIRECTION_VECTORS
 

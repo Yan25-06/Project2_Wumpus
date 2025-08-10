@@ -144,3 +144,29 @@ class Environment:
                     breeze = True
         glitter = self.__grid[y][x].has_gold
         return {'stench': stench, 'breeze': breeze, 'glitter': glitter}
+    
+    def print_environment_state(self):
+        print(f"Grid size: {self.__N}x{self.__N}")
+        print(f"Agent position: {self.__agent_pos}, direction: {self.__agent_dir}")
+        print(f"Scream: {self.__scream}")
+        print(f"Wumpus remaining: {self.__wumpus}")
+        print("Grid:")
+        for y in range(self.__N):
+            row = []
+            for x in range(self.__N):
+                cell = self.__grid[y][x]
+                cell_str = ""
+                if cell.has_wumpus:
+                    cell_str += "W"
+                if cell.has_pit:
+                    cell_str += "P"
+                if cell.has_gold:
+                    cell_str += "G"
+                # Pad or trim to 3 characters
+                cell_str = cell_str[:3].ljust(3)
+                if cell_str.strip() == "":
+                    cell_str = ".  "
+                row.append(cell_str)
+            print(" ".join(row))
+
+
