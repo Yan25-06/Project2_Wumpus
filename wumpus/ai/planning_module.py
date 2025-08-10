@@ -53,7 +53,7 @@ class PlanningModule:
 
             if current == goal:
                 self.solution = self._reconstruct_path(came_from, current)
-                return self.solution
+                return self.solution, g_score[goal]
 
             if current in visited:
                 continue
@@ -80,3 +80,20 @@ class PlanningModule:
                             break
 
         return None 
+    def get_nearest_goal_route(self, start, goals, start_dir):
+        cur_route = []
+        cur_goal = (-1, -1)
+        min_g = float('inf')
+        for goal in goals:
+            temp_route, g = self.find_route(start, goal, start_dir)
+            if g is None:
+                continue
+            if g < min_g:
+                min_g = g
+                cur_route = temp_route.copy()
+                cur_goal = goal
+        return cur_goal, cur_route
+                
+
+
+            
