@@ -16,7 +16,7 @@ def run_console():
     print(f"Final Score: {agent.score}")
 
 def run_gui():
-    from .GUI.game_board import GameBoardUI
+    from .GUI.game_board_clean import GameBoardUI
     app = GameBoardUI()
     app.mainloop()
 

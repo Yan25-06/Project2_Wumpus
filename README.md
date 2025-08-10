@@ -5,3 +5,5 @@
 # Cách chạy
 python3 -m wumpus.main
 
+# Cách chạy UI
+python -m wumpus.main --gui
