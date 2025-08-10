@@ -183,9 +183,12 @@ class HybridAgent(Agent):
                 if (die_prob < 1):
                     self.route = self.pm.find_route(goal)
         if (len(self.route) > 0):
+            cur_pos = (self.x, self.y)
+            if (cur_pos == self.route[0]):
+                self.route = self.route[1:]
             self.move_to_pos(self.route[0])
             self.visited.add(self.route[0])
-            self.route = self.route[:1]
+            self.route = self.route[1:]
             return True
         else:
             return False
