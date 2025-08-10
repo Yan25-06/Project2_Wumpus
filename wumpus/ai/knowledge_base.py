@@ -12,14 +12,15 @@ class KnowledgeBase:
 
 
     def add_fact(self, fact_str: str):
-        print(f"Adding fact: {fact_str}")
         fact = self.logic_parser.parse(fact_str)
         self.facts.append(fact)
 
     def add_rule(self, rule_str: str):
-        print(f"Adding rule: {rule_str}")
-        rule = self.logic_parser.parse(rule_str)
-        self.rules.append(rule)
+        try: 
+            rule = self.logic_parser.parse(rule_str)
+            self.rules.append(rule)
+        except Exception as e:
+            print(f"Error adding rule: {e}, rule_str: {rule_str}")
 
     def get_facts(self):
         return self.facts
@@ -27,6 +28,14 @@ class KnowledgeBase:
     def get_rules(self): 
         return self.rules
 
+    def represent_kb(self): 
+        print("Knowledge Base:")
+        print("Facts:")
+        for fact in self.facts:
+            print(f" - {fact}")
+        print("Rules:")
+        for rule in self.rules:
+            print(f" - {rule}")
 
     def get_flatten_rules_symbols(self) -> list[Fact]:
         """Get all unique symbols from the rules in the knowledge base."""

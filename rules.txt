@@ -1,0 +1,4 @@
+Breeze(x,y) => Pit(x+1,y) | Pit(x-1,y) | Pit(x,y+1) | Pit(x,y-1) 
+Stench(x,y) => Wumpus(x+1,y) | Wumpus(x-1,y) | Wumpus(x,y+1) | Wumpus(x,y-1)
+!Breeze(x,y) => !Pit(x+1,y) & !Pit(x-1,y) & !Pit(x,y+1) & !Pit(x,y-1) 
+!Stench(x,y) => !Wumpus(x+1,y) & !Wumpus(x-1,y) & !Wumpus(x,y+1) & !Wumpus(x,y-1)

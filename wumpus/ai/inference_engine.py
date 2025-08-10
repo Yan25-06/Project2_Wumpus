@@ -84,7 +84,14 @@ class InferenceEngine:
                 all_symbols.add(gr)
             elif isinstance(gr, (And, Or, Implies, Not)):
                 all_symbols.update(self.kb._flatten_logic_expr(gr))
-        unknown_symbols = [s for s in all_symbols if s not in self.kb.facts]
+        def is_known(symbol):
+            # Check if symbol or its negation is in facts
+            if symbol in self.kb.facts:
+                return True
+            from .rules_parser import Not
+            neg = Not(symbol) if not isinstance(symbol, Not) else symbol.expr
+            return neg in self.kb.facts
+        unknown_symbols = [s for s in all_symbols if not is_known(s)]
 
         if self.debug:
             print(f"Debug: Unknown symbols for query '{query}': {unknown_symbols}")
@@ -113,6 +120,8 @@ class InferenceEngine:
             return query_true_count / kb_true_count if kb_true_count > 0 else 0.5
 
         prob = model_check_recursive(unknown_symbols, query, self.kb.facts)
+        if self.debug:
+            print(f"Debug: Total models checked: {kb_true_count}, Query true count: {query_true_count}")
         return prob
 
     def _eval_math(self, expr: str, subs: Dict[str, str]) -> str:
@@ -212,7 +221,9 @@ class InferenceEngine:
 def test_eval_expr():
     kb = KnowledgeBase()
     kb.add_fact("Breeze(1,1)")
-    kb.add_fact("Pit(2,1)")
+    kb.add_fact("!Pit(1,2)")
+    kb.add_fact("!Pit(2,1)")
+    kb.add_fact("!Pit(0,1)")
     kb.add_rule("Breeze(1,1) => Pit(2,1) | Pit(0,1) | Pit(1,2) | Pit(1,0)")
     
     engine = InferenceEngine(kb, debug=True)
@@ -264,7 +275,7 @@ def test_unify_math():
 
 if __name__ == "__main__": 
     # test_model_check_probability()
-    # test_eval_expr()
+    test_eval_expr()
     # test_unify()
     # test_unify_math()
     pass

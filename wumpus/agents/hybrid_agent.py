@@ -6,9 +6,32 @@ from heapq import heappush, heappop
 from ..config.settings import DIRECTIONS, DIRECTION_VECTORS
 
 class HybridAgent(Agent):
+
+
+    def init_kb(self,kb: KnowledgeBase):
+
+        # init kb 
+        self.kb = kb
+        try: 
+            # read rules from rules.txt file in cwd
+            with open("rules.txt", "r") as f:
+                rules = f.readlines()
+                for rule in rules:
+                    self.kb.add_rule(rule.strip())
+            with open("facts.txt", "r") as f:
+                facts = f.readlines()
+                for fact in facts:
+                    self.kb.add_fact(fact.strip())
+        except Exception as e:
+            print(f"Error initializing knowledge base: {e}")
+        pass 
+
     def __init__(self, env, kb: KnowledgeBase, ie: InferenceEngine, pm: PlanningModule):
         super().__init__(env)
-        self.kb = kb
+
+        self.init_kb(kb)
+        
+
         self.ie = ie
         self.pm = pm
 
@@ -166,3 +189,7 @@ class HybridAgent(Agent):
             return True
         else:
             return False
+
+
+if __name__ == "__main__":
+    pass 
