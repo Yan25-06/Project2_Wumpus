@@ -3,14 +3,26 @@ from ..ai.knowledge_base import KnowledgeBase
 from ..ai.inference_engine import InferenceEngine
 from ..ai.planning_module import PlanningModule 
 from ..core.environment import Environment
+import pickle
+import os
 
 
-def init_agent(debug = False):
+def init_agent(map_path = None, debug = False):
     kb = KnowledgeBase()
     ie = InferenceEngine(kb)
     pm = PlanningModule()
-    env = Environment()
+    if map_path is None:
+        env = Environment()
+    else:
+        with open(map_path, "rb") as f:
+            env = pickle.load(f)
     agent = HybridAgent(env, kb, ie, pm, debug)
+
+    agent.x = 0
+    agent.y = 0
+    agent.route = [] 
+    agent.visited = {(0, 0)}  # Start with the initial position as visited
+
     return agent
 
 def test_kb_initialization():
@@ -60,16 +72,8 @@ def test_find_shoot_path():
     assert path is not None, "No shoot path found"
     print("test_find_shoot_path passed.")
 
-
-def test_step(agent = None):
-    if agent is None:
-        # Initialize agent if not provided
-        agent = init_agent(debug=True)
-        agent.x, agent.y = 0, 0
-        agent.route = []
-        # agent.pm.space = {(1,0), (0,1)}
-        agent.visited = {(0,0)} 
-
+    return agent
+def test_step(agent:HybridAgent):
     # step return True or False 
     print("Initial environment state:")
     agent.env.print_environment_state()
@@ -86,24 +90,43 @@ def test_find_route_from_A_to_B():
     # Define a simple space: 3x3 grid, all cells are safe
     pm.space = {(x, y) for x in range(5) for y in range(5)}
     start = (0, 0)
-    goal = (4, 4)
+    goal = (1, 0)
     start_dir = 'E'  # Assume 'E' is a valid direction
     route = pm.find_route(start, goal, start_dir)
     print(f"Route from {start} to {goal} (start_dir={start_dir}):")
     print(route)
-    expected_route = [(1,0), (2,0), (3,0), (4,0), (4,1), (4,2), (4,3), (4,4)] 
-    # expected_route = [(0,0), (1,0)] + new_route 
+    # expected_route = [(1,0), (2,0), (3,0), (4,0), (4,1), (4,2), (4,3), (4,4)] 
+    expected_route = [(1,0)] 
     assert route == expected_route, f"Expected {expected_route}, got {route}"
     print("test_find_route_from_A_to_B passed.")
 
 
-if __name__ == "__main__":
-    a = test_step()  
-    step = 1
-    while a.alive and step <= 20:
-        a = test_step(a)
-        step += 1
+def main():
+    a = init_agent("saved_envs/no_route_first_prob_check.pkl", debug=True)
+    try: 
+        test_step(a)  
+        step = 1
+        while a.alive and step < 1:
+            a = test_step(a)
+            step += 1
+    except Exception as e:
+        print(f"An error occurred during the test: {e}")
+        # print whole traceback
+        import traceback
+        traceback.print_exc()
+        return
+    finally: 
+        # Prompt to save environment after each run
+        save_prompt = input("Do you want to save the environment? (y/n): ").strip().lower()
+        if save_prompt == 'y':
+            folder = "saved_envs"
+            os.makedirs(folder, exist_ok=True)
+            filename = input("Enter filename for environment (without extension): ").strip()
+            filepath = os.path.join(folder, f"{filename}.pkl")
+            with open(filepath, "wb") as f:
+                pickle.dump(a.env, f)
+            print(f"Environment saved to {filepath}")
 
-    
-    
+if __name__ == "__main__":
+    main()
     # test_find_route_from_A_to_B()

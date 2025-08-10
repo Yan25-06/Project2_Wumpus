@@ -9,12 +9,27 @@ class InferenceEngine:
         self.debug = debug
     
 
-    def get_unknown_symbols(self) -> List[Fact]:
+    def get_unknown_symbols(self, rules=None) -> List[Fact]:
+        all_symbols = set()
+        rules = self.kb.rules if rules == None else rules
 
-        all_symbols = self.kb.get_flatten_rules_symbols()
-        unknown_symbols = [s for s in all_symbols if s not in self.kb.facts]
+        # work based on grounded rules
+        for gr in rules:
+            if isinstance(gr, Predicate):
+                all_symbols.add(gr)
+            elif isinstance(gr, (And, Or, Implies, Not)):
+                all_symbols.update(self.kb._flatten_logic_expr(gr))
+
+        def is_known(symbol):
+            # Check if symbol or its negation is in facts
+            if symbol in self.kb.facts:
+                return True
+            from .rules_parser import Not
+            neg = Not(symbol) if not isinstance(symbol, Not) else symbol.expr
+            return neg in self.kb.facts
+        unknown_symbols = [s for s in all_symbols if not is_known(s)]
         return unknown_symbols
-    
+
     def evaluate_expr(self, expression: LogicExpr, model: List[Fact]) -> bool:
         """
         Evaluate a single logic expression against a model.
@@ -50,12 +65,20 @@ class InferenceEngine:
         return True
 
     def model_check_probability(self, query: LogicExpr | str) -> float:  
+        if self.debug: 
+            print(f"Known facts: {self.kb.facts} ") 
+            print(f"Known rules: {self.kb.rules} ")
+            print(f"Query: {query} ")
         if isinstance(query, str): 
             query = LogicParser().parse(query) 
 
         # step 1 direct fact checking 
         if isinstance(query, Predicate) and query in self.kb.facts:
             return 1.0
+
+        # if query is a negated predicate and its negation is a fact, return 0.0
+        if isinstance(query, Not) and isinstance(query.expr, Predicate) and query in self.kb.facts: 
+            return 0.0
 
         # step 2: ground rules using known facts
         grounded_rules = []
@@ -78,12 +101,7 @@ class InferenceEngine:
             print(f"Debug: Grounded rules from known facts: {grounded_rules}")
 
         # step 3 extract unknown symbols from grounded rules
-        all_symbols = set()
-        for gr in grounded_rules:
-            if isinstance(gr, Predicate):
-                all_symbols.add(gr)
-            elif isinstance(gr, (And, Or, Implies, Not)):
-                all_symbols.update(self.kb._flatten_logic_expr(gr))
+        all_symbols = self.kb.get_flatten_rules_symbols(grounded_rules)
         def is_known(symbol):
             # Check if symbol or its negation is in facts
             if symbol in self.kb.facts:
@@ -94,7 +112,7 @@ class InferenceEngine:
         unknown_symbols = [s for s in all_symbols if not is_known(s)]
 
         if self.debug:
-            print(f"Debug: Unknown symbols for query '{query}': {unknown_symbols}")
+            print(f"Debug: Unknown symbols for query '{query}': {unknown_symbols}, all symbols: {all_symbols}")
 
         kb_true_count = 0
         query_true_count = 0
@@ -107,7 +125,11 @@ class InferenceEngine:
                     kb_true_count += 1
                     if self.is_model_satisfied([query], model):
                         query_true_count += 1
-                return
+
+                if self.debug:
+                    print(f"No unknown symbols in first run, checking model: {model}")
+                    print(f"Debug: Model {model} - KB satisfied: {kb_true_count}, Query satisfied: {query_true_count}")
+                return query_true_count / kb_true_count if kb_true_count > 0 else 0.5
             next_symbol = unknown_symbols[0]
             for truth_value in [True, False]:
                 new_model = model.copy()

@@ -1,6 +1,6 @@
 from ..agents.agent import Agent
 from ..ai.inference_engine import InferenceEngine, KnowledgeBase
-from ..core.environment import Environment
+from ..core.environment import Environment,Cell
 from ..ai.planning_module import PlanningModule
 from heapdict import heapdict
 from ..config.settings import DIRECTIONS, DIRECTION_VECTORS
@@ -9,7 +9,6 @@ class HybridAgent(Agent):
 
 
     def init_kb(self,kb: KnowledgeBase):
-
         # init kb 
         self.kb = kb
         try: 
@@ -61,35 +60,51 @@ class HybridAgent(Agent):
             ]
             if 0 <= nx < n and 0 <= ny < n
         ]
-        if (percepts["stench"]):
+        if percepts["stench"]:
             self.kb.update_kb(f"Stench({self.x}, {self.y})")
+            wumpus_probs = {}
             for cell in adj:
                 if (cell not in self.cell_prob or 0 < self.cell_prob[cell] < 1):
-                    self.wumpus_prob[cell] = self.ie.model_check_probability(f"Wumpus({self.x}, {self.y})")
-                    print(self.wumpus_prob[cell])
+                    self.wumpus_prob[cell] = self.ie.model_check_probability(f"Wumpus({cell[0]}, {cell[1]})")
+                    wumpus_probs[cell] = self.wumpus_prob[cell]
                     if self.wumpus_prob[cell] == 1:
                         self.can_hunt = True
                         if cell not in self.wumpus_at:
                             self.wumpus_at.append(cell)
+            if self.debug:
+                print(f"[DEBUG] Stench detected at ({self.x}, {self.y}), updating Wumpus prob for cells: {[(cell, prob) for cell, prob in wumpus_probs.items()]}")
 
-        if (percepts["breeze"]):
+        if percepts["breeze"]:
             self.kb.update_kb(f"Breeze({self.x}, {self.y})")
+            pit_probs = {}
             for cell in adj:
                 if (cell not in self.cell_prob or 0 < self.cell_prob[cell] < 1):
-                    self.pit_prob[cell] = self.ie.model_check_probability(f"Pit({self.x}, {self.y})")
-                    print(self.pit_prob[cell])
+                    self.pit_prob[cell] = self.ie.model_check_probability(f"Pit({cell[0]}, {cell[1]})")
+                    pit_probs[cell] = self.pit_prob[cell]
+            if self.debug:
+                print(f"[DEBUG] Breeze detected at ({self.x}, {self.y}), updating Pit prob for cells: {[(cell, prob) for cell, prob in pit_probs.items()]}")
 
         for cell in adj:
             if (cell in self.wumpus_prob and cell in self.pit_prob):
                 self.cell_prob[cell] = 1 - (1 - self.wumpus_prob[cell]) * (1 - self.pit_prob[cell])
+                if self.debug:
+                    print(f"[DEBUG] Combined cell probability for {cell}: {self.cell_prob[cell]}")
             elif (cell in self.wumpus_prob and self.wumpus_prob[cell] is not None):
                 self.cell_prob[cell] = self.wumpus_prob[cell]
+                if self.debug:
+                    print(f"[DEBUG] Cell probability for {cell} (Wumpus only): {self.cell_prob[cell]}")
             elif (cell in self.pit_prob and self.pit_prob[cell] is not None):
                 self.cell_prob[cell] = self.pit_prob[cell]
+                if self.debug:
+                    print(f"[DEBUG] Cell probability for {cell} (Pit only): {self.cell_prob[cell]}")
             if (cell in self.cell_prob and self.cell_prob[cell] == 0):
                 self.pm.add_safe_cell(cell)
+                if self.debug:
+                    print(f"[DEBUG] Cell {cell} marked as safe.")
             if (cell in self.cell_prob and 0 < self.cell_prob[cell] < 1):
                 self.uncertain_cell[cell] = self.cell_prob[cell]
+                if self.debug:
+                    print(f"[DEBUG] Cell {cell} marked as uncertain with probability {self.cell_prob[cell]}.")
 
     def add_adj_as_safe_cell(self):
         n = self.env.get_size()
@@ -235,10 +250,14 @@ class HybridAgent(Agent):
                 if self.debug:
                     print(f"[DEBUG] No safe route. Popping cell {goal} with die_prob {die_prob}.")
                 if (die_prob < 1):
-                    self.route,_ = self.pm.find_route((self.x, self.y),goal, self.dir)
+                    self.pm.space.add(goal)
+                    result,_ = self.pm.find_route((self.x, self.y),goal, self.dir)
+                    self.route = result
+                    print(f"[DEBUG] Start: {(self.x, self.y)} Found route to uncertain cell {goal}: {result}.")
         else:
             if self.debug:
                 print(f"[DEBUG] Route available: {self.route}. Moving to next position.")
+
         if (len(self.route) > 0):
             cur_pos = (self.x, self.y)
             if (cur_pos == self.route[0]):
