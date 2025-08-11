@@ -101,6 +101,7 @@ def test_find_route_from_A_to_B():
     print("test_find_route_from_A_to_B passed.")
 
 
+
 def main():
     path = "saved_envs/bug_inf.pkl"
     a = init_agent(path, debug=True)
@@ -109,7 +110,7 @@ def main():
         a, res = test_step(a)  
         agent_pos.append((a.x, a.y))
         step = 1
-        while res and step <= 30:
+        while res and step <= 50:
             a, res = test_step(a)
             agent_pos.append((a.x, a.y))
             step += 1

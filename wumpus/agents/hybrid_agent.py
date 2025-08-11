@@ -82,6 +82,8 @@ class HybridAgent(Agent):
 
             # Update wumpus probabilities
             for cell in adj:
+                if cell in self.pm.space: 
+                    continue
                 if (cell not in self.cell_prob or 0 < self.cell_prob[cell] < 1):
                     self.wumpus_prob[cell] = self.ie.model_check_probability(f"Wumpus({cell[0]}, {cell[1]})")
                     wumpus_probs[cell] = self.wumpus_prob[cell]
@@ -101,6 +103,8 @@ class HybridAgent(Agent):
             # Update pit probabilities
             pit_probs = {}
             for cell in adj:
+                if cell in self.pm.space: 
+                    continue
                 if (cell not in self.cell_prob or 0 < self.cell_prob[cell] < 1):
                     self.pit_prob[cell] = self.ie.model_check_probability(f"Pit({cell[0]}, {cell[1]})")
                     pit_probs[cell] = self.pit_prob[cell]
@@ -110,6 +114,8 @@ class HybridAgent(Agent):
 
 
         for cell in adj:
+            if cell in self.pm.space:
+                continue
             if (cell in self.wumpus_prob and cell in self.pit_prob):
                 self.cell_prob[cell] = 1 - (1 - self.wumpus_prob[cell]) * (1 - self.pit_prob[cell])
             elif (cell in self.wumpus_prob and self.wumpus_prob[cell] is not None):
@@ -211,17 +217,16 @@ class HybridAgent(Agent):
 
     def step(self):
 
-        if self.debug:  
-            print(f"[DEBUG] Uncertain cells: {self.uncertain_cell.heap}")
+
         if not self.alive:
             if self.debug:
                 print("[DEBUG] Agent is not alive. Returning False.")
             return False
         cur_pos = (self.x,self.y)
-        if (cur_pos not in self.cell_prob or 0 < self.cell_prob[cur_pos] < 1):
-            self.cell_prob[cur_pos] = 0
-            if (cur_pos in self.uncertain_cell):
-                del self.uncertain_cell
+        self.cell_prob[cur_pos] = 0
+        if (cur_pos in self.uncertain_cell):
+            del self.uncertain_cell[cur_pos]
+
         self.pm.add_safe_cell(cur_pos)
         percepts = self.env.get_percepts(self.x, self.y)
         if percepts["glitter"]:
@@ -274,6 +279,8 @@ class HybridAgent(Agent):
                 if hunt_plan and len(hunt_plan) > 0:
                     self.route = hunt_plan
             else:
+                if self.debug:  
+                    print(f"[DEBUG] Uncertain cells: {self.uncertain_cell.heap}")
                 goal, die_prob = self.uncertain_cell.popitem()
                 if self.debug:
                     print(f"[DEBUG] No safe route. Popping cell {goal} with die_prob {die_prob}.")
@@ -288,8 +295,6 @@ class HybridAgent(Agent):
 
         if (len(self.route) > 0):
             cur_pos = (self.x, self.y)
-            if (cur_pos == self.route[0]):
-                self.route = self.route[1:]
             if self.debug:
                 print(f"[DEBUG] Moving to position {self.route[0]}. Marking as visited.")
             self.move_to_pos(self.route[0])
