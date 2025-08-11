@@ -295,16 +295,9 @@ def test_unify_math():
     print('Unify result:', result[0] if result else None)
     print('Substituted rule:', result[1] if result else None)
 
-if __name__ == "__main__": 
-    # test_model_check_probability()
-    test_eval_expr()
-    # test_unify()
-    # test_unify_math()
-    pass
-
 def main():
     kb = KnowledgeBase()
-    kb.add_rule("Breeze(x,y) => Pit(x+1,y) | Pit(x-1,y) | Pit(x,y+1) | Pit(x,y-1)")
+    kb.add_rule("Breeze(1,1) => Pit(1,2) | Pit(2,1) | Pit(0,1) | Pit(1,0)")
     kb.add_fact("Breeze(1,1)")
     
     engine = InferenceEngine(kb, debug=True)
@@ -314,10 +307,19 @@ def main():
     
     # print(f"Final probability: {result}")
 
-    parser = LogicParser()
-    kb_expr = parser.parse("Breeze(x,y) => Pit(x+1,y) | Pit(x-1,y) | Pit(x,y+1) | Pit(x,y-1)")
-    query = parser.parse("Pit(1,2)")
-    symbols = ["Pit(1,2)"]  
-    model = {"Breeze(1,1)": True}  # Known facts
-    probability = engine.model_pos(symbols, model, kb_expr, query)
+    probability = engine.model_check_probability("Pit(1,2)")
+    # parser = LogicParser()
+    # kb_expr = parser.parse("Breeze(x,y) => Pit(x+1,y) | Pit(x-1,y) | Pit(x,y+1) | Pit(x,y-1)")
+    # query = parser.parse("Pit(1,2)")
+    # symbols = ["Pit(1,2)"]  
+    # model = {"Breeze(1,1)": True}  # Known facts
+    # probability = engine.model_pos(symbols, model, kb_expr, query)
     print(f"Probability of query being true: {probability}")
+
+if __name__ == "__main__": 
+    # test_model_check_probability()
+    # test_eval_expr()
+    # test_unify()
+    # test_unify_math()
+    main()
+    pass
