@@ -13,9 +13,9 @@ class RandomAgent(Agent):
             self.grab_gold()
             return True
         if(self.x, self.y) == (0, 0):
-            action = random.choice(['move', 'turn_left', 'turn_right', 'climb_out', 'shoot'])
+            action = random.choice(['move', 'move', 'turn_left', 'turn_right', 'climb_out', 'shoot'])
         else:
-            action = random.choice(['move', 'turn_left', 'turn_right', 'shoot'])
+            action = random.choice(['move', 'move', 'turn_left', 'turn_right', 'shoot'])
         if action == 'move':
             self.move_forward()
         elif action == 'turn_left':
