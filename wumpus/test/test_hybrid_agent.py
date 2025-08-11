@@ -103,7 +103,7 @@ def test_find_route_from_A_to_B():
 
 
 def main():
-    path = None
+    path = "saved_envs/comfy_map.pkl"
     a = init_agent(path, debug=True)
     agent_pos = [(a.x, a.y)] 
     try: 

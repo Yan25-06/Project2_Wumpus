@@ -40,8 +40,9 @@ class HybridAgent(Agent):
         
         self.ie = ie
         self.pm = pm
-
+        
         self.can_hunt = False
+        self.to_climbout = False
         self.aimed_wumpus = (-1, -1)
 
         self.visited = {(0, 0)}  # Start with the initial position as visited
@@ -229,6 +230,8 @@ class HybridAgent(Agent):
             if self.debug:
                 print("[DEBUG] Agent is not alive. Returning False.")
             return False
+        if (self.x == 0 and self.y == 0 and self.to_climbout == True):
+            return False
         cur_pos = (self.x,self.y)
         self.cell_prob[cur_pos] = 0
         if (cur_pos in self.uncertain_cell):
@@ -294,7 +297,7 @@ class HybridAgent(Agent):
                 goal, die_prob = self.uncertain_cell.popitem()
                 if self.debug:
                     print(f"[DEBUG] No safe route. Popping cell {goal} with die_prob {die_prob}.")
-                if (die_prob < 1):
+                if (die_prob < 0.8):
                     self.pm.space.add(goal)
                     result,_ = self.pm.find_route((self.x, self.y),goal, self.dir)
                     self.route = result
@@ -314,8 +317,11 @@ class HybridAgent(Agent):
                 print("[DEBUG] Step completed. Returning True.")
             return True
         else:
+            self.route,_ = self.pm.find_route((self.x, self.y),(0,0),self.dir)
+            self.to_climbout = True
             if self.debug:
-                print("[DEBUG] No route available. Returning False.")
+                print("[DEBUG] No route available. Climbing out.")
+            
             return False
 
 
