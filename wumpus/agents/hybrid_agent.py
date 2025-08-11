@@ -110,24 +110,14 @@ class HybridAgent(Agent):
         for cell in adj:
             if (cell in self.wumpus_prob and cell in self.pit_prob):
                 self.cell_prob[cell] = 1 - (1 - self.wumpus_prob[cell]) * (1 - self.pit_prob[cell])
-                if self.debug:
-                    print(f"[DEBUG] Combined cell probability for {cell}: {self.cell_prob[cell]}")
             elif (cell in self.wumpus_prob and self.wumpus_prob[cell] is not None):
                 self.cell_prob[cell] = self.wumpus_prob[cell]
-                if self.debug:
-                    print(f"[DEBUG] Cell probability for {cell} (Wumpus only): {self.cell_prob[cell]}")
             elif (cell in self.pit_prob and self.pit_prob[cell] is not None):
                 self.cell_prob[cell] = self.pit_prob[cell]
-                if self.debug:
-                    print(f"[DEBUG] Cell probability for {cell} (Pit only): {self.cell_prob[cell]}")
             if (cell in self.cell_prob and self.cell_prob[cell] == 0):
                 self.pm.add_safe_cell(cell)
-                if self.debug:
-                    print(f"[DEBUG] Cell {cell} marked as safe.")
             if (cell in self.cell_prob and 0 < self.cell_prob[cell] < 1):
                 self.uncertain_cell[cell] = self.cell_prob[cell]
-                if self.debug:
-                    print(f"[DEBUG] Cell {cell} marked as uncertain with probability {self.cell_prob[cell]}.")
 
     def add_adj_as_safe_cell(self):
         n = self.env.get_size()
@@ -218,6 +208,9 @@ class HybridAgent(Agent):
 
 
     def step(self):
+
+        if self.debug:  
+            print(f"[DEBUG] Uncertain cells: {self.uncertain_cell.heap}")
         if not self.alive:
             if self.debug:
                 print("[DEBUG] Agent is not alive. Returning False.")
