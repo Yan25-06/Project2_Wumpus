@@ -102,11 +102,12 @@ def test_find_route_from_A_to_B():
 
 
 def main():
-    a = init_agent("saved_envs/no_route_first_prob_check.pkl", debug=True)
+    path = "saved_envs/comfy_map.pkl"
+    a = init_agent(path, debug=True)
     try: 
         test_step(a)  
         step = 1
-        while a.alive and step < 1:
+        while a.alive and step <= 20:
             a = test_step(a)
             step += 1
     except Exception as e:
