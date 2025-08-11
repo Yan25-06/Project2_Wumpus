@@ -7,12 +7,11 @@ from ..config.settings import DIRECTIONS, DIRECTION_VECTORS
 
 class HybridAgent(Agent):
 
-
     def init_kb(self,kb: KnowledgeBase):
         # init kb 
         self.kb = kb
         try: 
-            # read rules from rules.txt file in cwd
+            # read rules from rules.txt    
             with open("rules.txt", "r") as f:
                 rules = f.readlines()
                 for rule in rules:
@@ -25,21 +24,29 @@ class HybridAgent(Agent):
             print(f"Error initializing knowledge base: {e}")
         pass 
 
-    def __init__(self, env: Environment, kb: KnowledgeBase, ie: InferenceEngine, pm: PlanningModule, debug = False):
-        super().__init__(env)
 
+    def __init__(self, env: Environment, kb: KnowledgeBase = None, ie: InferenceEngine = None, pm: PlanningModule = None, debug = False):
+        super().__init__(env)
+        if kb is None:
+            kb = KnowledgeBase()
+        if ie is None:
+            ie = InferenceEngine(kb)
+        if pm is None:
+            pm = PlanningModule()
+        
         self.init_kb(kb)
 
         self.debug = debug
         
-
         self.ie = ie
         self.pm = pm
 
         self.can_hunt = False
         self.aimed_wumpus = (-1, -1)
 
-        self.visited = set()
+        self.visited = {(0, 0)}  # Start with the initial position as visited
+        self.x = 0
+        self.y = 0
         self.route = []
 
         self.wumpus_at = []
@@ -251,22 +258,6 @@ class HybridAgent(Agent):
         self.update_kb_and_cell_prob(percepts)
 
         if len(self.route) == 0:
-            # if self.aimed_wumpus != (-1, -1):
-            #     if self.debug:
-            #         print(f"[DEBUG] Aimed Wumpus at {self.aimed_wumpus}. Turning to shoot direction.")
-            #     shoot = self.turn_to_shoot_dir()
-            #     if not shoot:
-            #         print("Tinh sai vi tri ban roi m")
-            #     wumpus_die = self.shoot()
-            #     if wumpus_die:
-            #         if self.debug:
-            #             print(f"[DEBUG] Wumpus at {self.aimed_wumpus} killed. Updating KB and probabilities.")
-            #         self.wumpus_at.remove(self.aimed_wumpus)
-            #         self.wumpus_prob[self.aimed_wumpus] = 0
-            #         self.cell_prob[self.aimed_wumpus] = 0
-            #         self.kb.add_fact(f"!Wumpus({self.x}, {self.y})")
-            #         self.pm.add_safe_cell(self.aimed_wumpus)
-            #     self.aimed_wumpus = (-1, -1)
             safe_nv_cell, safe_nv_route = self.get_nearest_notvisited_safe_cell_route()
             if safe_nv_cell is not None:
                 self.route = safe_nv_route
