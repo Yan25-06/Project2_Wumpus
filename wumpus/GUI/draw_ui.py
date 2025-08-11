@@ -251,7 +251,7 @@ class DrawUI:
             # Clear and reload text widget
             self.parent.moves_text.delete(1.0, tk.END)
             for move in self.parent.moves_history:
-                move_text = f"{move['number']:2d}. {move['action']:12s} -> ({move['position'][0]},{move['position'][1]}) {move['direction']} | {move['percepts']}"
+                move_text = f"{move['number']:2d}. {move['action']:12s} -> ({move['position'][0]},{move['position'][1]}) {move['direction']}"
                 if move['result']:
                     move_text += f" | {move['result']}"
                 move_text += "\n"
