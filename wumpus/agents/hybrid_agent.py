@@ -60,6 +60,14 @@ class HybridAgent(Agent):
             ]
             if 0 <= nx < n and 0 <= ny < n
         ]
+        if not percepts["stench"]:
+            self.kb.update_kb(f"!Stench({self.x}, {self.y})")
+            for cell in adj:
+                self.kb.update_kb(f"!Wumpus({cell[0]}, {cell[1]})")
+        if not percepts["breeze"]:
+            self.kb.update_kb(f"!Breeze({self.x}, {self.y})")
+            for cell in adj:
+                self.kb.update_kb(f"!Pit({cell[0]}, {cell[1]})")
         if percepts["stench"]:
             self.kb.update_kb(f"Stench({self.x}, {self.y})")
             wumpus_probs = {}
@@ -213,10 +221,14 @@ class HybridAgent(Agent):
             if self.debug:
                 print("[DEBUG] No stench or breeze. Adding adjacent cells as safe.")
             self.add_adj_as_safe_cell()
-        else:
-            if self.debug:
-                print(f"[DEBUG] Percepts: {percepts}. Updating KB and cell probabilities.")
-            self.update_kb_and_cell_prob(percepts)
+
+        # update kb 
+        if self.debug:
+            print(f"[DEBUG] Percepts: {percepts}. Updating KB and cell probabilities.")
+            self.kb.represent_kb()
+        
+        self.update_kb_and_cell_prob(percepts)
+
         if len(self.route) == 0:
             if self.aimed_wumpus != (-1, -1):
                 if self.debug:

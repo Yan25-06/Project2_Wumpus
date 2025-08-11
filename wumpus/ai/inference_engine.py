@@ -35,8 +35,8 @@ class InferenceEngine:
         Evaluate a single logic expression against a model.
         Returns True if the expression is satisfied by the model.
         """
-        if self.debug:
-            print(f"Debug: Evaluating expression {expression} against model {model}")
+        # if self.debug:
+        #     print(f"Debug: Evaluating expression {expression} against model {model}")
         if isinstance(expression, Predicate):
             return expression in model
         elif isinstance(expression, Not):
@@ -59,8 +59,8 @@ class InferenceEngine:
         """
         for expr in expressions:
             if not self.evaluate_expr(expr, model):
-                if self.debug:
-                    print(f"Debug: Expression {expr} is not satisfied by model {model}")
+                # if self.debug:
+                #     print(f"Debug: Expression {expr} is not satisfied by model {model}")
                 return False
         return True
 
@@ -126,9 +126,9 @@ class InferenceEngine:
                     if self.is_model_satisfied([query], model):
                         query_true_count += 1
 
-                if self.debug:
-                    print(f"No unknown symbols in first run, checking model: {model}")
-                    print(f"Debug: Model {model} - KB satisfied: {kb_true_count}, Query satisfied: {query_true_count}")
+                # if self.debug:
+                #     print(f"No unknown symbols in first run, checking model: {model}")
+                #     print(f"Debug: Model {model} - KB satisfied: {kb_true_count}, Query satisfied: {query_true_count}")
                 return query_true_count / kb_true_count if kb_true_count > 0 else 0.5
             next_symbol = unknown_symbols[0]
             for truth_value in [True, False]:
@@ -142,8 +142,8 @@ class InferenceEngine:
             return query_true_count / kb_true_count if kb_true_count > 0 else 0.5
 
         prob = model_check_recursive(unknown_symbols, query, self.kb.facts)
-        if self.debug:
-            print(f"Debug: Total models checked: {kb_true_count}, Query true count: {query_true_count}")
+        # if self.debug:
+        #     print(f"Debug: Total models checked: {kb_true_count}, Query true count: {query_true_count}")
         return prob
 
     def _eval_math(self, expr: str, subs: Dict[str, str]) -> str:
