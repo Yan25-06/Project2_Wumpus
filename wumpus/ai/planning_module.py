@@ -20,7 +20,8 @@ class PlanningModule:
         return 1 if desired_dir == cur_dir else 2
 
     def add_safe_cell(self, cell):
-        self.space.add(cell)
+        if (cell not in self.space):
+            self.space.add(cell)
 
     def _get_next_pos(self, cur_pos):
         # Adjacent moves in 4 directions

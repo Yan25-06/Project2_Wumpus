@@ -60,6 +60,8 @@ class HybridAgent(Agent):
             ]
             if 0 <= nx < n and 0 <= ny < n
         ]
+        self.kb.update_kb(f"!Pit({self.x}, {self.y})")
+        self.kb.update_kb(f"!Wumpus({self.x}, {self.y})")
         if not percepts["stench"]:
             self.kb.update_kb(f"!Stench({self.x}, {self.y})")
             for cell in adj:
@@ -207,6 +209,12 @@ class HybridAgent(Agent):
             if self.debug:
                 print("[DEBUG] Agent is not alive. Returning False.")
             return False
+        cur_pos = (self.x,self.y)
+        if (cur_pos not in self.cell_prob or 0 < self.cell_prob[cur_pos] < 1):
+            self.cell_prob[cur_pos] = 0
+            if (cur_pos in self.uncertain_cell):
+                del self.uncertain_cell
+        self.pm.add_safe_cell(cur_pos)
         percepts = self.env.get_percepts(self.x, self.y)
         if percepts["glitter"]:
             if self.debug:
