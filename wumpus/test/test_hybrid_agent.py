@@ -102,15 +102,20 @@ def test_find_route_from_A_to_B():
 
 
 def main():
-    path = "saved_envs/comfy_map.pkl"
+    path = "saved_envs/bug_inf.pkl"
     a = init_agent(path, debug=True)
+    agent_pos = [(a.x, a.y)] 
     try: 
         a, res = test_step(a)  
+        agent_pos.append((a.x, a.y))
         step = 1
         while res and step <= 30:
             a, res = test_step(a)
+            agent_pos.append((a.x, a.y))
             step += 1
+        print(f"Agent position after {step} steps: {agent_pos}")
     except Exception as e:
+        
         print(f"An error occurred during the test: {e}")
         # print whole traceback
         import traceback

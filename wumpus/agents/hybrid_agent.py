@@ -68,9 +68,17 @@ class HybridAgent(Agent):
             self.kb.update_kb(f"!Breeze({self.x}, {self.y})")
             for cell in adj:
                 self.kb.update_kb(f"!Pit({cell[0]}, {cell[1]})")
+
         if percepts["stench"]:
-            self.kb.update_kb(f"Stench({self.x}, {self.y})")
-            wumpus_probs = {}
+            # Update KB with Stench rule: Stench(x, y) => Wumpus(adj_1) | Wumpus(adj_2) | ...
+            self.kb.add_fact(f"Stench({self.x}, {self.y})")
+            wumpus_conditions = ' | '.join([f"Wumpus({cell[0]}, {cell[1]})" for cell in adj])
+            self.kb.add_rule(f"Stench({self.x}, {self.y}) => {wumpus_conditions}")
+            wumpus_probs = {} 
+
+            # self.kb.represent_kb()
+
+            # Update wumpus probabilities
             for cell in adj:
                 if (cell not in self.cell_prob or 0 < self.cell_prob[cell] < 1):
                     self.wumpus_prob[cell] = self.ie.model_check_probability(f"Wumpus({cell[0]}, {cell[1]})")
@@ -83,7 +91,12 @@ class HybridAgent(Agent):
                 print(f"[DEBUG] Stench detected at ({self.x}, {self.y}), updating Wumpus prob for cells: {[(cell, prob) for cell, prob in wumpus_probs.items()]}")
 
         if percepts["breeze"]:
-            self.kb.update_kb(f"Breeze({self.x}, {self.y})")
+            # Update KB with Breeze rule: Breeze(x, y) => Pit(adj_1) | Pit(adj_2) | ... 
+            self.kb.add_fact(f"Breeze({self.x}, {self.y})")
+            pit_conditions = ' | '.join([f"Pit({cell[0]}, {cell[1]})" for cell in adj])
+            self.kb.add_rule(f"Breeze({self.x}, {self.y}) => {pit_conditions}")
+
+            # Update pit probabilities
             pit_probs = {}
             for cell in adj:
                 if (cell not in self.cell_prob or 0 < self.cell_prob[cell] < 1):
@@ -91,6 +104,8 @@ class HybridAgent(Agent):
                     pit_probs[cell] = self.pit_prob[cell]
             if self.debug:
                 print(f"[DEBUG] Breeze detected at ({self.x}, {self.y}), updating Pit prob for cells: {[(cell, prob) for cell, prob in pit_probs.items()]}")
+
+
 
         for cell in adj:
             if (cell in self.wumpus_prob and cell in self.pit_prob):
@@ -225,7 +240,7 @@ class HybridAgent(Agent):
         # update kb 
         if self.debug:
             print(f"[DEBUG] Percepts: {percepts}. Updating KB and cell probabilities.")
-            self.kb.represent_kb()
+            # self.kb.represent_kb()
         
         self.update_kb_and_cell_prob(percepts)
 
