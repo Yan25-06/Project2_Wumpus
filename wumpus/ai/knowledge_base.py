@@ -37,10 +37,12 @@ class KnowledgeBase:
         for rule in self.rules:
             print(f" - {rule}")
 
-    def get_flatten_rules_symbols(self) -> list[Fact]:
+    def get_flatten_rules_symbols(self, rules: LogicExpr = None) -> list[Fact]:
         """Get all unique symbols from the rules in the knowledge base."""
+        if rules is None:
+            rules = self.rules
         symbols = set()
-        for rule in self.rules:
+        for rule in rules:
             if isinstance(rule, Predicate):
                 symbols.add(rule)
             elif isinstance(rule, (And, Or, Implies, Not)):
@@ -58,6 +60,7 @@ class KnowledgeBase:
         return set()
 
 
-    def update_kb(self, percepts): 
+    def update_kb(self, some_fact: str): 
+        self.add_fact(some_fact)
         pass 
 

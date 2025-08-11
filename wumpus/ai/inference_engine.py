@@ -9,19 +9,34 @@ class InferenceEngine:
         self.debug = debug
     
 
-    def get_unknown_symbols(self) -> List[Fact]:
+    def get_unknown_symbols(self, rules=None) -> List[Fact]:
+        all_symbols = set()
+        rules = self.kb.rules if rules == None else rules
 
-        all_symbols = self.kb.get_flatten_rules_symbols()
-        unknown_symbols = [s for s in all_symbols if s not in self.kb.facts]
+        # work based on grounded rules
+        for gr in rules:
+            if isinstance(gr, Predicate):
+                all_symbols.add(gr)
+            elif isinstance(gr, (And, Or, Implies, Not)):
+                all_symbols.update(self.kb._flatten_logic_expr(gr))
+
+        def is_known(symbol):
+            # Check if symbol or its negation is in facts
+            if symbol in self.kb.facts:
+                return True
+            from .rules_parser import Not
+            neg = Not(symbol) if not isinstance(symbol, Not) else symbol.expr
+            return neg in self.kb.facts
+        unknown_symbols = [s for s in all_symbols if not is_known(s)]
         return unknown_symbols
-    
+
     def evaluate_expr(self, expression: LogicExpr, model: List[Fact]) -> bool:
         """
         Evaluate a single logic expression against a model.
         Returns True if the expression is satisfied by the model.
         """
-        if self.debug:
-            print(f"Debug: Evaluating expression {expression} against model {model}")
+        # if self.debug:
+        #     print(f"Debug: Evaluating expression {expression} against model {model}")
         if isinstance(expression, Predicate):
             return expression in model
         elif isinstance(expression, Not):
@@ -44,18 +59,26 @@ class InferenceEngine:
         """
         for expr in expressions:
             if not self.evaluate_expr(expr, model):
-                if self.debug:
-                    print(f"Debug: Expression {expr} is not satisfied by model {model}")
+                # if self.debug:
+                #     print(f"Debug: Expression {expr} is not satisfied by model {model}")
                 return False
         return True
 
     def model_check_probability(self, query: LogicExpr | str) -> float:  
+        if self.debug: 
+            print(f"Known facts: {self.kb.facts} ") 
+            print(f"Known rules: {self.kb.rules} ")
+            print(f"Query: {query} ")
         if isinstance(query, str): 
             query = LogicParser().parse(query) 
 
         # step 1 direct fact checking 
         if isinstance(query, Predicate) and query in self.kb.facts:
             return 1.0
+
+        # if query is a negated predicate and its negation is a fact, return 0.0
+        if isinstance(query, Not) and isinstance(query.expr, Predicate) and query in self.kb.facts: 
+            return 0.0
 
         # step 2: ground rules using known facts
         grounded_rules = []
@@ -78,12 +101,7 @@ class InferenceEngine:
             print(f"Debug: Grounded rules from known facts: {grounded_rules}")
 
         # step 3 extract unknown symbols from grounded rules
-        all_symbols = set()
-        for gr in grounded_rules:
-            if isinstance(gr, Predicate):
-                all_symbols.add(gr)
-            elif isinstance(gr, (And, Or, Implies, Not)):
-                all_symbols.update(self.kb._flatten_logic_expr(gr))
+        all_symbols = self.kb.get_flatten_rules_symbols(grounded_rules)
         def is_known(symbol):
             # Check if symbol or its negation is in facts
             if symbol in self.kb.facts:
@@ -94,7 +112,7 @@ class InferenceEngine:
         unknown_symbols = [s for s in all_symbols if not is_known(s)]
 
         if self.debug:
-            print(f"Debug: Unknown symbols for query '{query}': {unknown_symbols}")
+            print(f"Debug: Unknown symbols for query '{query}': {unknown_symbols}, all symbols: {all_symbols}")
 
         kb_true_count = 0
         query_true_count = 0
@@ -107,7 +125,11 @@ class InferenceEngine:
                     kb_true_count += 1
                     if self.is_model_satisfied([query], model):
                         query_true_count += 1
-                return
+
+                # if self.debug:
+                #     print(f"No unknown symbols in first run, checking model: {model}")
+                #     print(f"Debug: Model {model} - KB satisfied: {kb_true_count}, Query satisfied: {query_true_count}")
+                return query_true_count / kb_true_count if kb_true_count > 0 else 0.5
             next_symbol = unknown_symbols[0]
             for truth_value in [True, False]:
                 new_model = model.copy()
@@ -120,8 +142,8 @@ class InferenceEngine:
             return query_true_count / kb_true_count if kb_true_count > 0 else 0.5
 
         prob = model_check_recursive(unknown_symbols, query, self.kb.facts)
-        if self.debug:
-            print(f"Debug: Total models checked: {kb_true_count}, Query true count: {query_true_count}")
+        # if self.debug:
+        #     print(f"Debug: Total models checked: {kb_true_count}, Query true count: {query_true_count}")
         return prob
 
     def _eval_math(self, expr: str, subs: Dict[str, str]) -> str:
@@ -273,16 +295,9 @@ def test_unify_math():
     print('Unify result:', result[0] if result else None)
     print('Substituted rule:', result[1] if result else None)
 
-if __name__ == "__main__": 
-    # test_model_check_probability()
-    test_eval_expr()
-    # test_unify()
-    # test_unify_math()
-    pass
-
 def main():
     kb = KnowledgeBase()
-    kb.add_rule("Breeze(x,y) => Pit(x+1,y) | Pit(x-1,y) | Pit(x,y+1) | Pit(x,y-1)")
+    kb.add_rule("Breeze(1,1) => Pit(1,2) | Pit(2,1) | Pit(0,1) | Pit(1,0)")
     kb.add_fact("Breeze(1,1)")
     
     engine = InferenceEngine(kb, debug=True)
@@ -292,10 +307,19 @@ def main():
     
     # print(f"Final probability: {result}")
 
-    parser = LogicParser()
-    kb_expr = parser.parse("Breeze(x,y) => Pit(x+1,y) | Pit(x-1,y) | Pit(x,y+1) | Pit(x,y-1)")
-    query = parser.parse("Pit(1,2)")
-    symbols = ["Pit(1,2)"]  
-    model = {"Breeze(1,1)": True}  # Known facts
-    probability = engine.model_pos(symbols, model, kb_expr, query)
+    probability = engine.model_check_probability("Pit(1,2)")
+    # parser = LogicParser()
+    # kb_expr = parser.parse("Breeze(x,y) => Pit(x+1,y) | Pit(x-1,y) | Pit(x,y+1) | Pit(x,y-1)")
+    # query = parser.parse("Pit(1,2)")
+    # symbols = ["Pit(1,2)"]  
+    # model = {"Breeze(1,1)": True}  # Known facts
+    # probability = engine.model_pos(symbols, model, kb_expr, query)
     print(f"Probability of query being true: {probability}")
+
+if __name__ == "__main__": 
+    # test_model_check_probability()
+    # test_eval_expr()
+    # test_unify()
+    # test_unify_math()
+    main()
+    pass
