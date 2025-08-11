@@ -55,9 +55,12 @@ class Agent(ABC):
         pos_x, pos_y = pos
         dx = pos_x - self.x
         dy = pos_y - self.y
-
         if (dx, dy) not in DIRECTION_VECTORS:
-            raise ValueError("Can only move to adjacent cell.")
+            if (dx, dy) == (0,0):
+                print("Same spot")
+                return
+            else:
+                raise ValueError("Can only move to adjacent cell.")
         dir = DIRECTION_VECTORS[(dx, dy)]
         diff = (DIRECTIONS.index(dir) - DIRECTIONS.index(self.dir)) % 4
 
