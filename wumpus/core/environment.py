@@ -83,6 +83,8 @@ class Environment:
                 if self.has_wumpus(nx, ny):
                     self.__scream = True
                     self.__wumpus -= 1
+                    # Remove the Wumpus from the grid
+                    self.__grid[ny][nx].has_wumpus = False
                     return True
         return False
     def grabbed_gold(self):

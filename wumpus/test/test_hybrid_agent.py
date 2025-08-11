@@ -82,7 +82,7 @@ def test_step(agent:HybridAgent):
     print(f"Step result: {result}")
     assert result is True or result is False, "Step did not return a boolean"
     print("test_step passed.")
-    return agent
+    return agent, result
 
 
 def test_find_route_from_A_to_B():
@@ -102,14 +102,20 @@ def test_find_route_from_A_to_B():
 
 
 def main():
-    a = init_agent("saved_envs/no_route_first_prob_check.pkl", debug=True)
+    path = "saved_envs/bug_inf.pkl"
+    a = init_agent(path, debug=True)
+    agent_pos = [(a.x, a.y)] 
     try: 
-        test_step(a)  
+        a, res = test_step(a)  
+        agent_pos.append((a.x, a.y))
         step = 1
-        while a.alive and step < 1:
-            a = test_step(a)
+        while res and step <= 30:
+            a, res = test_step(a)
+            agent_pos.append((a.x, a.y))
             step += 1
+        print(f"Agent position after {step} steps: {agent_pos}")
     except Exception as e:
+        
         print(f"An error occurred during the test: {e}")
         # print whole traceback
         import traceback

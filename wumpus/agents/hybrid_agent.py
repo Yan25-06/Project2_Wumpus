@@ -60,9 +60,27 @@ class HybridAgent(Agent):
             ]
             if 0 <= nx < n and 0 <= ny < n
         ]
+        self.kb.update_kb(f"!Pit({self.x}, {self.y})")
+        self.kb.update_kb(f"!Wumpus({self.x}, {self.y})")
+        if not percepts["stench"]:
+            self.kb.update_kb(f"!Stench({self.x}, {self.y})")
+            for cell in adj:
+                self.kb.update_kb(f"!Wumpus({cell[0]}, {cell[1]})")
+        if not percepts["breeze"]:
+            self.kb.update_kb(f"!Breeze({self.x}, {self.y})")
+            for cell in adj:
+                self.kb.update_kb(f"!Pit({cell[0]}, {cell[1]})")
+
         if percepts["stench"]:
-            self.kb.update_kb(f"Stench({self.x}, {self.y})")
-            wumpus_probs = {}
+            # Update KB with Stench rule: Stench(x, y) => Wumpus(adj_1) | Wumpus(adj_2) | ...
+            self.kb.add_fact(f"Stench({self.x}, {self.y})")
+            wumpus_conditions = ' | '.join([f"Wumpus({cell[0]}, {cell[1]})" for cell in adj])
+            self.kb.add_rule(f"Stench({self.x}, {self.y}) => {wumpus_conditions}")
+            wumpus_probs = {} 
+
+            # self.kb.represent_kb()
+
+            # Update wumpus probabilities
             for cell in adj:
                 if (cell not in self.cell_prob or 0 < self.cell_prob[cell] < 1):
                     self.wumpus_prob[cell] = self.ie.model_check_probability(f"Wumpus({cell[0]}, {cell[1]})")
@@ -75,7 +93,12 @@ class HybridAgent(Agent):
                 print(f"[DEBUG] Stench detected at ({self.x}, {self.y}), updating Wumpus prob for cells: {[(cell, prob) for cell, prob in wumpus_probs.items()]}")
 
         if percepts["breeze"]:
-            self.kb.update_kb(f"Breeze({self.x}, {self.y})")
+            # Update KB with Breeze rule: Breeze(x, y) => Pit(adj_1) | Pit(adj_2) | ... 
+            self.kb.add_fact(f"Breeze({self.x}, {self.y})")
+            pit_conditions = ' | '.join([f"Pit({cell[0]}, {cell[1]})" for cell in adj])
+            self.kb.add_rule(f"Breeze({self.x}, {self.y}) => {pit_conditions}")
+
+            # Update pit probabilities
             pit_probs = {}
             for cell in adj:
                 if (cell not in self.cell_prob or 0 < self.cell_prob[cell] < 1):
@@ -84,27 +107,19 @@ class HybridAgent(Agent):
             if self.debug:
                 print(f"[DEBUG] Breeze detected at ({self.x}, {self.y}), updating Pit prob for cells: {[(cell, prob) for cell, prob in pit_probs.items()]}")
 
+
+
         for cell in adj:
             if (cell in self.wumpus_prob and cell in self.pit_prob):
                 self.cell_prob[cell] = 1 - (1 - self.wumpus_prob[cell]) * (1 - self.pit_prob[cell])
-                if self.debug:
-                    print(f"[DEBUG] Combined cell probability for {cell}: {self.cell_prob[cell]}")
             elif (cell in self.wumpus_prob and self.wumpus_prob[cell] is not None):
                 self.cell_prob[cell] = self.wumpus_prob[cell]
-                if self.debug:
-                    print(f"[DEBUG] Cell probability for {cell} (Wumpus only): {self.cell_prob[cell]}")
             elif (cell in self.pit_prob and self.pit_prob[cell] is not None):
                 self.cell_prob[cell] = self.pit_prob[cell]
-                if self.debug:
-                    print(f"[DEBUG] Cell probability for {cell} (Pit only): {self.cell_prob[cell]}")
             if (cell in self.cell_prob and self.cell_prob[cell] == 0):
                 self.pm.add_safe_cell(cell)
-                if self.debug:
-                    print(f"[DEBUG] Cell {cell} marked as safe.")
             if (cell in self.cell_prob and 0 < self.cell_prob[cell] < 1):
                 self.uncertain_cell[cell] = self.cell_prob[cell]
-                if self.debug:
-                    print(f"[DEBUG] Cell {cell} marked as uncertain with probability {self.cell_prob[cell]}.")
 
     def add_adj_as_safe_cell(self):
         n = self.env.get_size()
@@ -195,10 +210,19 @@ class HybridAgent(Agent):
 
 
     def step(self):
+
+        if self.debug:  
+            print(f"[DEBUG] Uncertain cells: {self.uncertain_cell.heap}")
         if not self.alive:
             if self.debug:
                 print("[DEBUG] Agent is not alive. Returning False.")
             return False
+        cur_pos = (self.x,self.y)
+        if (cur_pos not in self.cell_prob or 0 < self.cell_prob[cur_pos] < 1):
+            self.cell_prob[cur_pos] = 0
+            if (cur_pos in self.uncertain_cell):
+                del self.uncertain_cell
+        self.pm.add_safe_cell(cur_pos)
         percepts = self.env.get_percepts(self.x, self.y)
         if percepts["glitter"]:
             if self.debug:
@@ -213,10 +237,14 @@ class HybridAgent(Agent):
             if self.debug:
                 print("[DEBUG] No stench or breeze. Adding adjacent cells as safe.")
             self.add_adj_as_safe_cell()
-        else:
-            if self.debug:
-                print(f"[DEBUG] Percepts: {percepts}. Updating KB and cell probabilities.")
-            self.update_kb_and_cell_prob(percepts)
+
+        # update kb 
+        if self.debug:
+            print(f"[DEBUG] Percepts: {percepts}. Updating KB and cell probabilities.")
+            # self.kb.represent_kb()
+        
+        self.update_kb_and_cell_prob(percepts)
+
         if len(self.route) == 0:
             if self.aimed_wumpus != (-1, -1):
                 if self.debug:
