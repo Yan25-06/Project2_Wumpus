@@ -66,7 +66,7 @@ class ButtonFunctions:
                 action_taken = f"Agent turned {direction_word} to {new_dir}"
             elif new_has_gold and not prev_has_gold:
                 action_taken = "Agent grabbed the gold!"
-            elif new_score == prev_score - 1000:
+            elif new_score == prev_score - 10:
                 action_taken = "Agent shot and " + ("killed the Wumpus!" if self.parent.env.get_scream() else "missed.")
             elif not continue_game and (self.parent.agent.x, self.parent.agent.y) == (0, 0):
                 action_taken = f"Agent climbed out {'with' if self.parent.agent.has_gold else 'without'} the gold!"
@@ -324,7 +324,7 @@ class ButtonFunctions:
                     results_text.update()
                     
                     # Create new environment with same configuration
-                    test_env = self.parent.env #Environment(N=self.parent.board_size)
+                    test_env = Environment(N=self.parent.board_size)
                     
                     # Clear the randomly generated elements first
                     for env_y in range(self.parent.board_size):
@@ -336,9 +336,12 @@ class ButtonFunctions:
                             if test_env.has_gold(env_x, env_y):
                                 test_env._Environment__grid[env_y][env_x].has_gold = False
                     
+                    # Reset wumpus count and scream
+                    test_env._Environment__wumpus = len(saved_wumpus_pos)
+                    test_env._Environment__scream = False
+                    
                     # Restore the exact same map configuration
-                    if saved_wumpus_pos:
-                        wx, wy = saved_wumpus_pos
+                    for wx, wy in saved_wumpus_pos:
                         test_env._Environment__grid[wy][wx].has_wumpus = True
                     
                     for pit_x, pit_y in saved_pit_positions:

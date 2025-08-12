@@ -10,7 +10,7 @@ class Cell:
         self.percepts = {'stench': False, 'breeze': False, 'glitter': False}  # Store percepts when visited
 
 class Environment:
-    def __init__(self, N=8, K=2, pit_prob=0.1, seed=None):
+    def __init__(self, N=8, K=2, pit_prob=0.2, seed=None):
         self._rand = random.Random(seed)
 
         print(seed)

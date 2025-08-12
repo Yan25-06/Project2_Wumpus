@@ -232,6 +232,9 @@ class HybridAgent(Agent):
                 print("[DEBUG] Agent is not alive. Returning False.")
             return False
         if (self.x == 0 and self.y == 0 and self.to_climbout == True):
+            if self.debug:
+                print("[DEBUG] Agent is ready to climb out.")
+            self.climb_out()
             return False
         cur_pos = (self.x,self.y)
         self.cell_prob[cur_pos] = 0
@@ -247,7 +250,8 @@ class HybridAgent(Agent):
             self.route,_ = self.pm.find_route((self.x, self.y),(0,0),self.dir)
         if self.has_gold and self.x == 0 and self.y == 0: # has gold and at exit
             if self.debug:
-                print("[DEBUG] Agent has gold and is at exit. Returning False.")
+                print("[DEBUG] Agent has gold and is at exit. Climbing out.")
+            self.climb_out()
             return False
         if not percepts["stench"] and not percepts["breeze"]:
             if self.debug:

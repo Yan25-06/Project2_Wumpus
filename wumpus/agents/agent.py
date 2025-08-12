@@ -21,8 +21,8 @@ class Agent(ABC):
         pass
 
     def turn_left(self):
-        dirs = ['N', 'W', 'S', 'E']
-        self.dir = dirs[(dirs.index(self.dir) + 1) % 4]
+        dirs = ['N', 'E', 'S', 'W']
+        self.dir = dirs[(dirs.index(self.dir) - 1) % 4]
         self.env.set_agent_pos_and_dir(self.x, self.y, self.dir)
         self.score -= 1
         print(f"Agent turned left to {self.dir}")
@@ -76,7 +76,7 @@ class Agent(ABC):
 
     def grab_gold(self):
         self.has_gold = True
-        self.score += 1000
+        self.score += 10
         self.env.grabbed_gold()
         self.env.set_safe(self.x, self.y)
         print("Agent grabbed the gold!")

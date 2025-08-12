@@ -3,6 +3,7 @@ from tkinter import ttk, messagebox
 import time
 from ..core.environment import Environment
 from ..agents.random_agent import RandomAgent
+from ..agents.hybrid_agent import HybridAgent
 from .setup_ui import SetupUI
 from .draw_ui import DrawUI
 from .button_functions import ButtonFunctions
