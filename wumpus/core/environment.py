@@ -11,7 +11,7 @@ class Cell:
 
 class Environment:
     def __init__(self, N=8, K=2, pit_prob=0.2, seed=None):
-        self._rand = random.Random(seed + pit_prob * 10 - N) if seed is not None else random.Random()
+        self._rand = random.Random(seed + pit_prob * 10 - N / 2) if seed is not None else random.Random()
 
         print(seed)
         self.__N = N
