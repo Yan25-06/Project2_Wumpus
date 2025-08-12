@@ -120,9 +120,23 @@ class ButtonFunctions:
         self.parent.status_label.config(text="Agent stopped")
 
     def reset_game(self, seed=None):
-        """Reset the game to initial state"""
+        """Reset the game to initial state with a new random map"""
         self.stop_game()
-        self.parent.env = Environment(N=self.parent.board_size, seed=seed)
+        
+        # Use stored settings or defaults
+        board_size = getattr(self.parent, 'board_size', 8)
+        pit_probability = getattr(self.parent, 'pit_probability', 0.2)
+        wumpus_count = getattr(self.parent, 'wumpus_count', 2)
+        
+        # Always create a new random environment when reset is pressed
+        # Use current time as seed if no seed provided to ensure randomness
+        import time
+        reset_seed = seed if seed is not None else int(time.time() * 1000) % 10000
+        
+        print(f"Reset: Creating new random environment with seed {reset_seed}")
+        self.parent.env = Environment(N=board_size, K=wumpus_count, 
+                                    pit_prob=pit_probability, seed=reset_seed)
+        
         # Create agent based on current mode
         if self.parent.agent_mode == "Random":
             self.parent.agent = RandomAgent(self.parent.env)
@@ -131,120 +145,258 @@ class ButtonFunctions:
         self.parent.game_over = False
         self.parent.moves_history = []  # Clear moves history
         self.parent.moves_text.delete(1.0, tk.END)  # Clear moves display
-        self.parent.status_label.config(text="Game Reset - Click Start Agent to begin")
+        self.parent.status_label.config(text="Game Reset - New random map generated")
         self.parent.start_button.config(state='normal')
         self.parent.draw_ui.draw_board()
         self.parent.draw_ui.update_display()
     
-    def toggle_agent_mode(self):
-        """Toggle between Random and Hybrid agent modes"""
-        if self.parent.game_running:
-            messagebox.showwarning("Cannot Change", "Stop the game before changing agent mode!")
-            return
-            
-        self.parent.agent_mode = "Hybrid" if self.parent.agent_mode == "Random" else "Random"
-        self.parent.agent_button.config(text=f"AGENT: {self.parent.agent_mode}")
-        
-        # Recreate agent with new mode
-        if self.parent.agent_mode == "Random":
-            self.parent.agent = RandomAgent(self.parent.env)
-        else:  # Hybrid
-            self.parent.agent = HybridAgent(self.parent.env)
-        
-        self.parent.draw_ui.update_display()
-        messagebox.showinfo("Agent Changed", f"Agent mode changed to: {self.parent.agent_mode}")
-    
     def change_board_size(self):
-        """Change the board size"""
+        """Open comprehensive game settings dialog"""
         if self.parent.game_running:
-            messagebox.showwarning("Cannot Change", "Stop the game before changing board size!")
+            messagebox.showwarning("Cannot Change", "Stop the game before changing settings!")
             return
             
-        # Show size selection dialog
-        sizes = [4, 6, 8, 10, 12, 16]
-        size_window = tk.Toplevel(self.parent)
-        size_window.title("Select Board Size")
-        size_window.geometry("400x350")
-        size_window.resizable(False, False)
+        # Show comprehensive settings dialog
+        settings_window = tk.Toplevel(self.parent)
+        settings_window.title("Game Settings")
+        settings_window.geometry("500x700")
+        settings_window.resizable(False, False)
         
         # Center the dialog
-        size_window.transient(self.parent)
-        size_window.grab_set()
+        settings_window.transient(self.parent)
+        settings_window.grab_set()
         
         # Main container
-        main_container = ttk.Frame(size_window, padding=15)
+        main_container = ttk.Frame(settings_window, padding=20)
         main_container.pack(fill='both', expand=True)
         
-        ttk.Label(main_container, text="Choose Board Size:", font=('Arial', 14, 'bold')).pack(pady=(0, 10))
+        ttk.Label(main_container, text="Game Configuration Settings", 
+                 font=('Arial', 16, 'bold')).pack(pady=(0, 20))
         
-        selected_size = tk.IntVar(value=self.parent.board_size)
+        # Agent Mode Section
+        agent_frame = ttk.LabelFrame(main_container, text="Agent Type", padding=15)
+        agent_frame.pack(fill='x', pady=(0, 15))
         
-        # Radio buttons frame
-        radio_frame = ttk.Frame(main_container)
-        radio_frame.pack(pady=10)
+        ttk.Label(agent_frame, text="Select the type of agent to use:", font=('Arial', 10)).pack(anchor='w')
         
-        for size in sizes:
-            ttk.Radiobutton(radio_frame, text=f"{size}x{size} Grid", 
-                          variable=selected_size, value=size,
-                          style='TRadiobutton').pack(pady=5, anchor='w')
+        agent_mode_var = tk.StringVar(value=getattr(self.parent, 'agent_mode', 'Hybrid'))
         
-        def apply_size():
-            new_size = selected_size.get()
-            if new_size != self.parent.board_size:
-                self.parent.board_size = new_size
-                self.parent.width = new_size
-                self.parent.height = new_size
-                self.parent.size_button.config(text=f"SIZE: {self.parent.board_size}x{self.parent.board_size}")
+        agent_radio_frame = ttk.Frame(agent_frame)
+        agent_radio_frame.pack(fill='x', pady=(5, 0))
+        
+        ttk.Radiobutton(agent_radio_frame, text="Random Agent", 
+                      variable=agent_mode_var, value="Random").pack(side='left', padx=(0, 20))
+        ttk.Radiobutton(agent_radio_frame, text="Hybrid Agent (AI)", 
+                      variable=agent_mode_var, value="Hybrid").pack(side='left')
+        
+        # Board Size Section
+        board_frame = ttk.LabelFrame(main_container, text="Board Size", padding=15)
+        board_frame.pack(fill='x', pady=(0, 15))
+        
+        ttk.Label(board_frame, text="Select board dimensions:", font=('Arial', 10)).pack(anchor='w')
+        
+        board_size_var = tk.IntVar(value=getattr(self.parent, 'board_size', 8))
+        board_sizes = [2, 3, 4, 5, 6, 7, 8]
+        
+        board_radio_frame = ttk.Frame(board_frame)
+        board_radio_frame.pack(fill='x', pady=(5, 0))
+        
+        for i, size in enumerate(board_sizes):
+            row = i // 3
+            col = i % 3
+            ttk.Radiobutton(board_radio_frame, text=f"{size}x{size}", 
+                          variable=board_size_var, value=size).grid(row=row, column=col, 
+                          sticky='w', padx=(0, 20), pady=2)
+        
+        # Pit Probability Section
+        pit_frame = ttk.LabelFrame(main_container, text="Pit Probability", padding=15)
+        pit_frame.pack(fill='x', pady=(0, 15))
+        
+        ttk.Label(pit_frame, text="Probability of pits appearing in each cell (0.05 to 0.5):", 
+                 font=('Arial', 10)).pack(anchor='w')
+        
+        pit_prob_var = tk.DoubleVar(value=getattr(self.parent, 'pit_probability', 0.1))
+        
+        pit_frame_inner = ttk.Frame(pit_frame)
+        pit_frame_inner.pack(fill='x', pady=(5, 0))
+        
+        # Input field for pit probability
+        ttk.Label(pit_frame_inner, text="Pit Probability:").pack(side='left')
+        pit_entry = ttk.Entry(pit_frame_inner, textvariable=pit_prob_var, width=10)
+        pit_entry.pack(side='left', padx=(5, 10))
+        
+        pit_percentage_label = ttk.Label(pit_frame_inner, text="10.0%")
+        pit_percentage_label.pack(side='left')
+        
+        def update_pit_percentage(*args):
+            try:
+                value = pit_prob_var.get()
+                pit_percentage_label.config(text=f"{value:.1%}")
+            except:
+                pit_percentage_label.config(text="Invalid")
+        
+        pit_prob_var.trace('w', update_pit_percentage)
+        update_pit_percentage()  # Initialize label
+        
+        # Number of Wumpus Section
+        wumpus_frame = ttk.LabelFrame(main_container, text="Number of Wumpus", padding=15)
+        wumpus_frame.pack(fill='x', pady=(0, 15))
+        
+        ttk.Label(wumpus_frame, text="Number of Wumpus creatures on the board (1 to 10):", 
+                 font=('Arial', 10)).pack(anchor='w')
+        
+        wumpus_var = tk.IntVar(value=getattr(self.parent, 'wumpus_count', 2))
+        
+        wumpus_frame_inner = ttk.Frame(wumpus_frame)
+        wumpus_frame_inner.pack(fill='x', pady=(5, 0))
+        
+        # Input field for number of wumpus
+        ttk.Label(wumpus_frame_inner, text="Wumpus Count:").pack(side='left')
+        wumpus_entry = ttk.Entry(wumpus_frame_inner, textvariable=wumpus_var, width=10)
+        wumpus_entry.pack(side='left', padx=(5, 10))
+        
+        def apply_settings():
+            try:
+                new_agent_mode = agent_mode_var.get()
+                new_board_size = board_size_var.get()
+                new_pit_prob = pit_prob_var.get()
+                new_wumpus_count = wumpus_var.get()
                 
-                # Recalculate cell size based on new board size
-                screen_width = self.parent.winfo_screenwidth()
-                screen_height = self.parent.winfo_screenheight()
-                available_width = screen_width - 600  # Reserve space for right panel
-                available_height = screen_height - 250  # Leave space for title and margins
+                # Validate pit probability
+                if not (0.05 <= new_pit_prob <= 0.5):
+                    messagebox.showerror("Invalid Settings", 
+                                       f"Pit probability must be between 0.05 (5%) and 0.5 (50%)!\n"
+                                       f"Current value: {new_pit_prob:.3f}")
+                    return
                 
-                # Calculate optimal cell size for new board size
-                max_cell_width = available_width // self.parent.width
-                max_cell_height = available_height // self.parent.height
-                self.parent.cell_size = min(max_cell_width, max_cell_height, 120)  # Cap at 120px for very small boards
+                # Validate wumpus count
+                if not (1 <= new_wumpus_count <= 10):
+                    messagebox.showerror("Invalid Settings", 
+                                       f"Number of Wumpus must be between 1 and 10!\n"
+                                       f"Current value: {new_wumpus_count}")
+                    return
                 
-                print(f"New board size: {new_size}x{new_size}, Cell size: {self.parent.cell_size}px")
+                # Validate wumpus count vs board size
+                max_wumpus = int(new_board_size * new_board_size * 0.4)  # Max 40% of cells
+                if new_wumpus_count > max_wumpus:
+                    messagebox.showerror("Invalid Settings", 
+                                       f"Too many Wumpus for a {new_board_size}x{new_board_size} board!\n"
+                                       f"Maximum recommended: {max_wumpus}\n"
+                                       f"Current value: {new_wumpus_count}")
+                    return
                 
-                # Recreate environment and agent with new size
-                self.parent.env = Environment(N=new_size)
-                if self.parent.agent_mode == "Random":
-                    self.parent.agent = RandomAgent(self.parent.env)
-                else:  # Hybrid
-                    self.parent.agent = HybridAgent(self.parent.env)
-                
-                # Update canvas size with new cell size
+            except ValueError:
+                messagebox.showerror("Invalid Input", 
+                                   "Please enter valid numbers for pit probability and wumpus count.")
+                return
+            
+            # Check if only agent mode changed (keep same map)
+            agent_mode_changed = new_agent_mode != getattr(self.parent, 'agent_mode', 'Hybrid')
+            settings_changed = (new_board_size != getattr(self.parent, 'board_size', 8) or
+                              new_pit_prob != getattr(self.parent, 'pit_probability', 0.2) or
+                              new_wumpus_count != getattr(self.parent, 'wumpus_count', 2))
+            
+            # Store new settings
+            self.parent.agent_mode = new_agent_mode
+            self.parent.board_size = new_board_size
+            self.parent.pit_probability = new_pit_prob
+            self.parent.wumpus_count = new_wumpus_count
+            self.parent.width = new_board_size
+            self.parent.height = new_board_size
+            
+            # Update UI button texts
+            self.parent.size_button.config(text="SETTINGS")
+            self.parent.agent_button.config(text=f"AGENT: {new_agent_mode}")
+            
+            # Recalculate cell size based on new board size
+            screen_width = self.parent.winfo_screenwidth()
+            screen_height = self.parent.winfo_screenheight()
+            available_width = screen_width - 600  # Reserve space for right panel
+            available_height = screen_height - 250  # Leave space for title and margins
+            
+            # Calculate optimal cell size for new board size
+            max_cell_width = available_width // self.parent.width
+            max_cell_height = available_height // self.parent.height
+            self.parent.cell_size = min(max_cell_width, max_cell_height, 120)  # Cap at 120px
+            
+            print(f"Settings update - Agent: {new_agent_mode}, Board: {new_board_size}x{new_board_size}, "
+                  f"Pit Prob: {new_pit_prob:.1%}, Wumpus: {new_wumpus_count}, "
+                  f"Cell size: {self.parent.cell_size}px")
+            
+            # Handle environment recreation based on what changed
+            if settings_changed:
+                # Environment settings changed - create new random environment
+                print("Creating new random environment due to setting changes")
+                self.parent.env = Environment(N=new_board_size, K=new_wumpus_count, 
+                                            pit_prob=new_pit_prob, seed=self.parent.seed)
+                change_message = "Environment settings changed - new random map generated"
+            elif agent_mode_changed:
+                # Only agent mode changed - keep same environment, just reset agent position
+                print("Agent mode changed - keeping same environment, resetting agent state and visited cells")
+                # Reset agent position in current environment but don't change the map
+                self.parent.env.set_agent_pos_and_dir(0, 0, 'E')
+                # Reset all visited cells so the new agent starts fresh
+                self.parent.env.reset_visited_cells()
+                # Mark starting position as visited for the new agent
+                self.parent.env.mark_visited(0, 0)
+                change_message = "Agent type changed - same map layout maintained, visited cells reset"
+            else:
+                change_message = "No changes detected"
+            
+            # Create agent based on new mode
+            if new_agent_mode == "Random":
+                self.parent.agent = RandomAgent(self.parent.env)
+            else:  # Hybrid
+                self.parent.agent = HybridAgent(self.parent.env)
+            
+            # Reset agent's visited tracking if it exists (for HybridAgent)
+            if hasattr(self.parent.agent, 'visited'):
+                self.parent.agent.visited = {(0, 0)}  # Reset with starting position
+            
+            # Update canvas size if board size changed
+            if settings_changed:
                 self.parent.canvas.config(width=self.parent.width * self.parent.cell_size, 
                                  height=self.parent.height * self.parent.cell_size)
-                
-                # Reset game state
-                self.parent.game_over = False
-                self.parent.moves_history = []
-                self.parent.moves_text.delete(1.0, tk.END)
-                
-                self.parent.draw_ui.draw_board()
-                self.parent.draw_ui.update_display()
-                
-                messagebox.showinfo("Board Size Changed", f"Board size changed to: {new_size}x{new_size}\nCell size: {self.parent.cell_size}px")
             
-            size_window.destroy()
+            # Reset game state
+            self.parent.game_over = False
+            self.parent.moves_history = []
+            self.parent.moves_text.delete(1.0, tk.END)
+            
+            self.parent.draw_ui.draw_board()
+            self.parent.draw_ui.update_display()
+            
+            settings_window.destroy()
+            
+            # Show appropriate message
+            if agent_mode_changed and not settings_changed:
+                messagebox.showinfo("Agent Changed", 
+                                  f"Agent type changed to: {new_agent_mode}\n"
+                                  f"Same map layout maintained for fair comparison.")
+            else:
+                messagebox.showinfo("Settings Applied", 
+                                  f"Game settings updated:\n"
+                                  f"• Agent Type: {new_agent_mode}\n"
+                                  f"• Board Size: {new_board_size}x{new_board_size}\n"
+                                  f"• Pit Probability: {new_pit_prob:.1%}\n"
+                                  f"• Wumpus Count: {new_wumpus_count}\n"
+                                  f"• Cell Size: {self.parent.cell_size}px\n\n"
+                                  f"{change_message}")
         
         # Button frame
         button_frame = ttk.Frame(main_container)
-        button_frame.pack(pady=(30, 0))
+        button_frame.pack(pady=(20, 0))
         
         # Style the buttons
-        apply_btn = ttk.Button(button_frame, text="Apply Changes", command=apply_size)
+        apply_btn = ttk.Button(button_frame, text="Apply Settings", command=apply_settings)
         apply_btn.pack(side='left', padx=(0, 10), ipadx=20, ipady=5)
         
-        cancel_btn = ttk.Button(button_frame, text="Cancel", command=size_window.destroy)
+        cancel_btn = ttk.Button(button_frame, text="Cancel", command=settings_window.destroy)
         cancel_btn.pack(side='left', padx=(10, 0), ipadx=20, ipady=5)
     
     def compare_agents(self):
         """Compare Random and Hybrid agents on the same map"""
+        
         if self.parent.game_running:
             messagebox.showwarning("Cannot Compare", "Stop the current game before comparing agents!")
             return
@@ -312,60 +464,31 @@ class ButtonFunctions:
                 compare_window.after(0, add_close_button)
             
             try:
-                # Save the current map configuration
-                saved_wumpus_pos = []
-                saved_pit_positions = []
-                saved_gold_pos = None
-                
-                # Find current positions
-                for y in range(self.parent.height):
-                    for x in range(self.parent.width):
-                        if self.parent.env.has_wumpus(x, y):
-                            saved_wumpus_pos.append((x, y))
-                        if self.parent.env.has_pit(x, y):
-                            saved_pit_positions.append((x, y))
-                        if self.parent.env.has_gold(x, y):
-                            saved_gold_pos = (x, y)
+                # Get the original environment configuration
+                board_size = getattr(self.parent, 'board_size', 8)
+                pit_probability = getattr(self.parent, 'pit_probability', 0.2)
+                wumpus_count = getattr(self.parent, 'wumpus_count', 2)
+                original_seed = self.parent.seed
                 
                 update_ui("=== AGENT COMPARISON RESULTS ===\n\n")
-                update_ui(f"Board Size: {self.parent.board_size}x{self.parent.board_size}\n")
-                update_ui(f"Wumpus Position: {saved_wumpus_pos}\n")
-                update_ui(f"Pit Positions: {saved_pit_positions}\n") 
-                update_ui(f"Gold Position: {saved_gold_pos}\n\n")
+                update_ui(f"Board Size: {board_size}x{board_size}\n")
+                update_ui(f"Pit Probability: {pit_probability:.1%}\n")
+                update_ui(f"Wumpus Count: {wumpus_count}\n")
+                update_ui(f"Seed: {original_seed}\n\n")
                 
-                # Test both agents
+                # Test both agents on completely fresh environments
                 agent_results = {}
                 
                 for agent_name in ["Random", "Hybrid"]:
                     update_ui(f"--- Testing {agent_name} Agent ---\n")
                     
-                    # Create new environment with same configuration
-                    test_env = Environment(N=self.parent.board_size)
+                    # Create a completely fresh environment with the same seed and configuration
+                    # This ensures both agents get exactly the same original map
+                    test_env = Environment(N=board_size, K=wumpus_count, 
+                                         pit_prob=pit_probability, seed=original_seed)
                     
-                    # Clear the randomly generated elements first
-                    for env_y in range(self.parent.board_size):
-                        for env_x in range(self.parent.board_size):
-                            if test_env.has_wumpus(env_x, env_y):
-                                test_env._Environment__grid[env_y][env_x].has_wumpus = False
-                            if test_env.has_pit(env_x, env_y):
-                                test_env._Environment__grid[env_y][env_x].has_pit = False
-                            if test_env.has_gold(env_x, env_y):
-                                test_env._Environment__grid[env_y][env_x].has_gold = False
-                    
-                    # Reset wumpus count and scream
-                    test_env._Environment__wumpus = len(saved_wumpus_pos)
-                    test_env._Environment__scream = False
-                    
-                    # Restore the exact same map configuration
-                    for wx, wy in saved_wumpus_pos:
-                        test_env._Environment__grid[wy][wx].has_wumpus = True
-                    
-                    for pit_x, pit_y in saved_pit_positions:
-                        test_env._Environment__grid[pit_y][pit_x].has_pit = True
-                    
-                    if saved_gold_pos:
-                        gx, gy = saved_gold_pos
-                        test_env._Environment__grid[gy][gx].has_gold = True
+                    # Set agent to starting position
+                    test_env.set_agent_pos_and_dir(0, 0, 'E')
                     
                     # Create agent
                     if agent_name == "Random":

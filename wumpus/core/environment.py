@@ -132,6 +132,18 @@ class Environment:
             percepts = self.get_percepts(x, y)
             self.__grid[y][x].percepts = percepts
     
+    def reset_visited_cells(self):
+        """Reset all visited markers in the environment and restore gold to original position"""
+        for y in range(self.__N):
+            for x in range(self.__N):
+                self.__grid[y][x].visited = False
+                self.__grid[y][x].percepts = {'stench': False, 'breeze': False, 'glitter': False}
+        
+        # Restore gold to its original position if it was grabbed
+        if hasattr(self, '_Environment__gold_pos'):
+            gold_x, gold_y = self.__gold_pos
+            self.__grid[gold_y][gold_x].has_gold = True
+    
     def get_cell_percepts(self, x, y):
         """Get the stored percepts for a visited cell"""
         if 0 <= x < self.__N and 0 <= y < self.__N and self.__grid[y][x].visited:
