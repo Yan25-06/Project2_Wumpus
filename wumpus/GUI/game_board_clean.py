@@ -94,7 +94,6 @@ class GameBoardUI(tk.Tk):
         return self.button_functions.stop_game()
     
     def reset_game(self):
-        self.seed += 1
         return self.button_functions.reset_game(seed=self.seed)
     
     def change_board_size(self):
