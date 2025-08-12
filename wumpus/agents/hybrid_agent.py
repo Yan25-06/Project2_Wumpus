@@ -249,9 +249,9 @@ class HybridAgent(Agent):
             self.grab_gold()
             self.route,_ = self.pm.find_route((self.x, self.y),(0,0),self.dir)
         if self.has_gold and self.x == 0 and self.y == 0: # has gold and at exit
+            self.climb_out()
             if self.debug:
                 print("[DEBUG] Agent has gold and is at exit. Climbing out.")
-            self.climb_out()
             return False
         if not percepts["stench"] and not percepts["breeze"]:
             if self.debug:

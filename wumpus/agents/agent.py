@@ -5,6 +5,7 @@ from ..config.settings import DIRECTIONS, DIRECTION_VECTORS
 # This class defines the basic structure and methods that all agents must implement.
 class Agent(ABC):
     def __init__(self, env: Environment):
+        self.steps = 0
         self.env = env
         self.x, self.y = env.get_agent_pos()
         self.dir = env.get_agent_dir()
@@ -21,13 +22,15 @@ class Agent(ABC):
         pass
 
     def turn_left(self):
-        dirs = ['N', 'E', 'S', 'W']
-        self.dir = dirs[(dirs.index(self.dir) - 1) % 4]
+        self.steps += 1
+        dirs = ['N', 'W', 'S', 'E']
+        self.dir = dirs[(dirs.index(self.dir) + 1) % 4]
         self.env.set_agent_pos_and_dir(self.x, self.y, self.dir)
         self.score -= 1
         print(f"Agent turned left to {self.dir}")
 
     def turn_right(self):
+        self.steps += 1
         dirs = ['N', 'E', 'S', 'W']
         self.dir = dirs[(dirs.index(self.dir) + 1) % 4]
         self.env.set_agent_pos_and_dir(self.x, self.y, self.dir)
@@ -36,6 +39,7 @@ class Agent(ABC):
 
 
     def move_forward(self):
+        self.steps += 1
         dx, dy = {'N':(0,1), 'E':(1,0), 'S':(0,-1), 'W':(-1,0)}[self.dir]
         nx, ny = self.x + dx, self.y + dy
         self.score -= 1
@@ -75,6 +79,7 @@ class Agent(ABC):
         self.move_forward()
 
     def grab_gold(self):
+        self.steps += 1
         self.has_gold = True
         self.score += 10
         self.env.grabbed_gold()
@@ -82,6 +87,7 @@ class Agent(ABC):
         print("Agent grabbed the gold!")
     
     def climb_out(self):
+        self.steps += 1
         if self.has_gold:
             self.score += 1000
             print("Agent climbed out with the gold!")
@@ -89,6 +95,7 @@ class Agent(ABC):
             print("Agent climbed out without gold.")
     
     def shoot(self):
+        self.steps += 1
         if not self.can_shoot:
             print("Agent cannot shoot again yet!")
             return False

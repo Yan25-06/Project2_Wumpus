@@ -49,7 +49,6 @@ class GameBoardUI(tk.Tk):
         self.agent = HybridAgent(self.env)
         self.game_running = False
         self.game_over = False
-        self.steps = 0
         self.moves_history = []  # Track all agent moves
         
         # Initialize UI components

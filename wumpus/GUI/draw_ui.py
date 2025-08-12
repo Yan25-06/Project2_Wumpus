@@ -215,7 +215,7 @@ class DrawUI:
         self.parent.position_label.config(text=f"Agent Position: ({self.parent.agent.x}, {self.parent.agent.y})")
         self.parent.direction_label.config(text=f"Agent Direction: {self.parent.agent.dir}")
         self.parent.score_label.config(text=f"Score: {self.parent.agent.score}")
-        self.parent.steps_label.config(text=f"Steps: {self.parent.steps}")
+        self.parent.steps_label.config(text=f"Steps: {self.parent.agent.steps}")
         
         # Reset scream if it was triggered
         if self.parent.env.get_scream():

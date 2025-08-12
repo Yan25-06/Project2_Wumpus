@@ -127,7 +127,7 @@ class SetupUI:
                                     font=status_font, foreground='green')
         self.parent.score_label.pack(pady=2)
         
-        self.parent.steps_label = ttk.Label(status_frame, text=f"Steps: {self.parent.steps}", 
+        self.parent.steps_label = ttk.Label(status_frame, text=f"Steps: {self.parent.agent.steps}", 
                                     font=status_font)
         self.parent.steps_label.pack(pady=2)
     

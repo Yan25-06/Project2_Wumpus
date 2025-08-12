@@ -2,6 +2,7 @@ import tkinter as tk
 from tkinter import ttk, messagebox
 import io
 import sys
+import threading
 from ..core.environment import Environment
 from ..agents.random_agent import RandomAgent
 from ..agents.hybrid_agent import HybridAgent
@@ -35,7 +36,6 @@ class ButtonFunctions:
         try:
             # Execute agent step
             continue_game = self.parent.agent.step()
-            self.parent.steps += 1
         finally:
             # Restore stdout
             sys.stdout = old_stdout
@@ -95,7 +95,7 @@ class ButtonFunctions:
             else:
                 self.parent.status_label.config(text="Game ended")
         
-        if self.parent.steps > 100:
+        if self.parent.agent.steps > 100:
             self.parent.game_over = True
             self.parent.status_label.config(text="Game Over! Too many steps!")
             messagebox.showwarning("Game Over", "Agent took too many steps!")
@@ -129,7 +129,6 @@ class ButtonFunctions:
         else:  # Hybrid
             self.parent.agent = HybridAgent(self.parent.env)
         self.parent.game_over = False
-        self.parent.steps = 0
         self.parent.moves_history = []  # Clear moves history
         self.parent.moves_text.delete(1.0, tk.END)  # Clear moves display
         self.parent.status_label.config(text="Game Reset - Click Start Agent to begin")
@@ -223,7 +222,6 @@ class ButtonFunctions:
                 
                 # Reset game state
                 self.parent.game_over = False
-                self.parent.steps = 0
                 self.parent.moves_history = []
                 self.parent.moves_text.delete(1.0, tk.END)
                 
@@ -294,6 +292,25 @@ class ButtonFunctions:
         scrollbar_compare.config(command=results_text.yview)
         
         def run_comparison():
+            def update_ui(text):
+                """Thread-safe UI update"""
+                compare_window.after(0, lambda: results_text.insert(tk.END, text))
+                compare_window.after(0, lambda: results_text.update())
+            
+            def finish_comparison():
+                """Finish the comparison and show close button"""
+                compare_window.after(0, lambda: progress.stop())
+                compare_window.after(0, lambda: progress.pack_forget())
+                
+                # Close button
+                def add_close_button():
+                    close_frame = ttk.Frame(main_container)
+                    close_frame.pack(pady=(20, 0))
+                    ttk.Button(close_frame, text="Close", 
+                              command=compare_window.destroy).pack()
+                
+                compare_window.after(0, add_close_button)
+            
             try:
                 # Save the current map configuration
                 saved_wumpus_pos = []
@@ -310,18 +327,17 @@ class ButtonFunctions:
                         if self.parent.env.has_gold(x, y):
                             saved_gold_pos = (x, y)
                 
-                results_text.insert(tk.END, "=== AGENT COMPARISON RESULTS ===\n\n")
-                results_text.insert(tk.END, f"Board Size: {self.parent.board_size}x{self.parent.board_size}\n")
-                results_text.insert(tk.END, f"Wumpus Position: {saved_wumpus_pos}\n")
-                results_text.insert(tk.END, f"Pit Positions: {saved_pit_positions}\n") 
-                results_text.insert(tk.END, f"Gold Position: {saved_gold_pos}\n\n")
+                update_ui("=== AGENT COMPARISON RESULTS ===\n\n")
+                update_ui(f"Board Size: {self.parent.board_size}x{self.parent.board_size}\n")
+                update_ui(f"Wumpus Position: {saved_wumpus_pos}\n")
+                update_ui(f"Pit Positions: {saved_pit_positions}\n") 
+                update_ui(f"Gold Position: {saved_gold_pos}\n\n")
                 
                 # Test both agents
                 agent_results = {}
                 
                 for agent_name in ["Random", "Hybrid"]:
-                    results_text.insert(tk.END, f"--- Testing {agent_name} Agent ---\n")
-                    results_text.update()
+                    update_ui(f"--- Testing {agent_name} Agent ---\n")
                     
                     # Create new environment with same configuration
                     test_env = Environment(N=self.parent.board_size)
@@ -393,15 +409,14 @@ class ButtonFunctions:
                     }
                     
                     # Display results
-                    results_text.insert(tk.END, f"  Steps: {steps}\n")
-                    results_text.insert(tk.END, f"  Final Score: {test_agent.score}\n")
-                    results_text.insert(tk.END, f"  Outcome: {game_outcome}\n")
-                    results_text.insert(tk.END, f"  Has Gold: {test_agent.has_gold}\n")
-                    results_text.insert(tk.END, f"  Can shoot: {test_agent.can_shoot}\n\n")
-                    results_text.update()
+                    update_ui(f"  Steps: {steps}\n")
+                    update_ui(f"  Final Score: {test_agent.score}\n")
+                    update_ui(f"  Outcome: {game_outcome}\n")
+                    update_ui(f"  Has Gold: {test_agent.has_gold}\n")
+                    update_ui(f"  Can shoot: {test_agent.can_shoot}\n\n")
                 
                 # Summary comparison
-                results_text.insert(tk.END, "=== COMPARISON SUMMARY ===\n\n")
+                update_ui("=== COMPARISON SUMMARY ===\n\n")
                 
                 random_result = agent_results["Random"]
                 hybrid_result = agent_results["Hybrid"]
@@ -415,20 +430,20 @@ class ButtonFunctions:
                 else:
                     winner = "Tie"
                 
-                results_text.insert(tk.END, f"Winner: {winner} Agent\n\n")
+                update_ui(f"Winner: {winner} Agent\n\n")
                 
                 # Detailed comparison
-                results_text.insert(tk.END, "Score Comparison:\n")
-                results_text.insert(tk.END, f"  Random Agent: {random_result['score']}\n")
-                results_text.insert(tk.END, f"  Hybrid Agent: {hybrid_result['score']}\n\n")
+                update_ui("Score Comparison:\n")
+                update_ui(f"  Random Agent: {random_result['score']}\n")
+                update_ui(f"  Hybrid Agent: {hybrid_result['score']}\n\n")
                 
-                results_text.insert(tk.END, "Steps Comparison:\n")
-                results_text.insert(tk.END, f"  Random Agent: {random_result['steps']}\n")
-                results_text.insert(tk.END, f"  Hybrid Agent: {hybrid_result['steps']}\n\n")
+                update_ui("Steps Comparison:\n")
+                update_ui(f"  Random Agent: {random_result['steps']}\n")
+                update_ui(f"  Hybrid Agent: {hybrid_result['steps']}\n\n")
                 
-                results_text.insert(tk.END, "Outcome Comparison:\n")
-                results_text.insert(tk.END, f"  Random Agent: {random_result['outcome']}\n")
-                results_text.insert(tk.END, f"  Hybrid Agent: {hybrid_result['outcome']}\n\n")
+                update_ui("Outcome Comparison:\n")
+                update_ui(f"  Random Agent: {random_result['outcome']}\n")
+                update_ui(f"  Hybrid Agent: {hybrid_result['outcome']}\n\n")
                 
                 # Efficiency analysis
                 if winner != "Tie":
@@ -438,33 +453,29 @@ class ButtonFunctions:
                     score_diff = winning_agent['score'] - losing_agent['score']
                     step_diff = winning_agent['steps'] - losing_agent['steps']
                     
-                    results_text.insert(tk.END, f"Performance Analysis:\n")
-                    results_text.insert(tk.END, f"  {winner} agent scored {score_diff} points better\n")
+                    update_ui(f"Performance Analysis:\n")
+                    update_ui(f"  {winner} agent scored {score_diff} points better\n")
                     
                     if step_diff < 0:
-                        results_text.insert(tk.END, f"  {winner} agent was {abs(step_diff)} steps more efficient\n")
+                        update_ui(f"  {winner} agent was {abs(step_diff)} steps more efficient\n")
                     elif step_diff > 0:
-                        results_text.insert(tk.END, f"  {winner} agent took {step_diff} more steps\n")
+                        update_ui(f"  {winner} agent took {step_diff} more steps\n")
                     else:
-                        results_text.insert(tk.END, f"  Both agents took the same number of steps\n")
+                        update_ui(f"  Both agents took the same number of steps\n")
                 
-                progress.stop()
-                progress.pack_forget()
-                
-                # Close button
-                close_frame = ttk.Frame(main_container)
-                close_frame.pack(pady=(20, 0))
-                
-                ttk.Button(close_frame, text="Close", 
-                          command=compare_window.destroy).pack()
+                finish_comparison()
                 
             except Exception as e:
-                progress.stop()
-                results_text.insert(tk.END, f"Error during comparison: {str(e)}\n")
-                messagebox.showerror("Comparison Error", f"An error occurred: {str(e)}")
+                def show_error():
+                    progress.stop()
+                    results_text.insert(tk.END, f"Error during comparison: {str(e)}\n")
+                    messagebox.showerror("Comparison Error", f"An error occurred: {str(e)}")
+                
+                compare_window.after(0, show_error)
         
         # Run comparison in a separate thread to avoid blocking UI  
-        compare_window.after(100, run_comparison)
+        comparison_thread = threading.Thread(target=run_comparison, daemon=True)
+        comparison_thread.start()
     
     def run_agent(self):
         """Run the agent continuously"""
@@ -475,6 +486,6 @@ class ButtonFunctions:
         
         # Schedule next move if game is still running
         if self.parent.game_running and not self.parent.game_over and self.parent.agent.alive:
-            self.parent.after(500, self.run_agent)  # Move every second
+            self.parent.after(100, self.run_agent)  # Move every second
         else:
             self.stop_game()
