@@ -4,6 +4,7 @@ from ..core.environment import Environment,Cell
 from ..ai.planning_module import PlanningModule
 from heapdict import heapdict
 from ..config.settings import DIRECTIONS, DIRECTION_VECTORS
+import random
 
 class HybridAgent(Agent):
 
@@ -200,9 +201,9 @@ class HybridAgent(Agent):
 
         if ax == wx:
             if wy > ay:
-                target_dir = 'N'
-            else:
                 target_dir = 'S'
+            else:
+                target_dir = 'N'
         elif ay == wy:
             if wx > ax:
                 target_dir = 'E'
@@ -261,6 +262,23 @@ class HybridAgent(Agent):
         self.update_kb_and_cell_prob(percepts)
 
         if len(self.route) == 0:
+            if (self.aimed_wumpus != (-1, -1)):
+                if self.debug:
+                    print(f"[DEBUG] Aimed Wumpus at {self.aimed_wumpus}. Turning to shoot direction.")
+                shoot = self.turn_to_shoot_dir()
+                if not shoot:
+                    print("Tinh sai vi tri ban roi m")
+                wumpus_die = self.shoot()
+                if wumpus_die:
+                    if self.debug:
+                        print(f"[DEBUG] Wumpus at {self.aimed_wumpus} killed. Updating KB and probabilities.")
+                    self.wumpus_at.remove(self.aimed_wumpus)
+                    self.wumpus_prob[self.aimed_wumpus] = 0
+                    self.cell_prob[self.aimed_wumpus] = 0
+                    self.kb.add_fact(f"!Wumpus({self.x}, {self.y})")
+                    self.pm.add_safe_cell(self.aimed_wumpus)
+                self.aimed_wumpus = (-1, -1)
+                return True
             safe_nv_cell, safe_nv_route = self.get_nearest_notvisited_safe_cell_route()
             if safe_nv_cell is not None:
                 self.route = safe_nv_route
@@ -273,24 +291,9 @@ class HybridAgent(Agent):
                 if hunt_plan is not None:
                     if self.debug:
                         print(f"Found hunt path. Moving to hunt spot: {hunt_plan}")
-                    while (len(hunt_plan) > 0):
-                        self.move_to_pos(hunt_plan[0])
-                        hunt_plan = hunt_plan[1:]
-                    if self.debug:
-                        print(f"[DEBUG] Aimed Wumpus at {self.aimed_wumpus}. Turning to shoot direction.")
-                    shoot = self.turn_to_shoot_dir()
-                    if not shoot:
-                        print("Tinh sai vi tri ban roi m")
-                    wumpus_die = self.shoot()
-                    if wumpus_die:
-                        if self.debug:
-                            print(f"[DEBUG] Wumpus at {self.aimed_wumpus} killed. Updating KB and probabilities.")
-                        self.wumpus_at.remove(self.aimed_wumpus)
-                        self.wumpus_prob[self.aimed_wumpus] = 0
-                        self.cell_prob[self.aimed_wumpus] = 0
-                        self.kb.add_fact(f"!Wumpus({self.x}, {self.y})")
-                        self.pm.add_safe_cell(self.aimed_wumpus)
-                return True
+                    if (len(hunt_plan) == 0):
+                        return True
+                    self.route = hunt_plan
             else:
                 if self.debug:  
                     print(f"[DEBUG] Uncertain cells: {self.uncertain_cell.heap}")
@@ -298,6 +301,10 @@ class HybridAgent(Agent):
                 if self.debug:
                     print(f"[DEBUG] No safe route. Popping cell {goal} with die_prob {die_prob}.")
                 if (die_prob < 0.8):
+                    # same_die_prob = [cell for cell, prob in self.uncertain_cell.items() if prob == die_prob]
+                    # same_die_prob.append(goal)
+                    # if len(same_die_prob) > 1:
+                    #     goal = random.choice(same_die_prob)
                     self.pm.space.add(goal)
                     result,_ = self.pm.find_route((self.x, self.y),goal, self.dir)
                     self.route = result
