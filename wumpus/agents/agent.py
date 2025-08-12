@@ -76,7 +76,7 @@ class Agent(ABC):
 
     def grab_gold(self):
         self.has_gold = True
-        self.score += 10
+        self.score += 1000
         self.env.grabbed_gold()
         self.env.set_safe(self.x, self.y)
         print("Agent grabbed the gold!")

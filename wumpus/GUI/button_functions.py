@@ -66,7 +66,7 @@ class ButtonFunctions:
                 action_taken = f"Agent turned {direction_word} to {new_dir}"
             elif new_has_gold and not prev_has_gold:
                 action_taken = "Agent grabbed the gold!"
-            elif new_score == prev_score - 10:
+            elif new_score == prev_score - 1000:
                 action_taken = "Agent shot and " + ("killed the Wumpus!" if self.parent.env.get_scream() else "missed.")
             elif not continue_game and (self.parent.agent.x, self.parent.agent.y) == (0, 0):
                 action_taken = f"Agent climbed out {'with' if self.parent.agent.has_gold else 'without'} the gold!"
@@ -118,11 +118,11 @@ class ButtonFunctions:
         self.parent.start_button.config(state='normal')
         self.parent.stop_button.config(state='disabled')
         self.parent.status_label.config(text="Agent stopped")
-    
-    def reset_game(self):
+
+    def reset_game(self, seed=None):
         """Reset the game to initial state"""
         self.stop_game()
-        self.parent.env = Environment(N=self.parent.board_size)
+        self.parent.env = Environment(N=self.parent.board_size, seed=seed)
         # Create agent based on current mode
         if self.parent.agent_mode == "Random":
             self.parent.agent = RandomAgent(self.parent.env)
@@ -296,7 +296,7 @@ class ButtonFunctions:
         def run_comparison():
             try:
                 # Save the current map configuration
-                saved_wumpus_pos = None
+                saved_wumpus_pos = []
                 saved_pit_positions = []
                 saved_gold_pos = None
                 
@@ -304,7 +304,7 @@ class ButtonFunctions:
                 for y in range(self.parent.height):
                     for x in range(self.parent.width):
                         if self.parent.env.has_wumpus(x, y):
-                            saved_wumpus_pos = (x, y)
+                            saved_wumpus_pos.append((x, y))
                         if self.parent.env.has_pit(x, y):
                             saved_pit_positions.append((x, y))
                         if self.parent.env.has_gold(x, y):
@@ -324,7 +324,7 @@ class ButtonFunctions:
                     results_text.update()
                     
                     # Create new environment with same configuration
-                    test_env = Environment(N=self.parent.board_size)
+                    test_env = self.parent.env #Environment(N=self.parent.board_size)
                     
                     # Clear the randomly generated elements first
                     for env_y in range(self.parent.board_size):
@@ -385,7 +385,8 @@ class ButtonFunctions:
                         'score': test_agent.score,
                         'outcome': game_outcome,
                         'has_gold': test_agent.has_gold,
-                        'alive': test_agent.alive
+                        'alive': test_agent.alive,
+                        'can_shoot': test_agent.can_shoot
                     }
                     
                     # Display results
@@ -393,7 +394,7 @@ class ButtonFunctions:
                     results_text.insert(tk.END, f"  Final Score: {test_agent.score}\n")
                     results_text.insert(tk.END, f"  Outcome: {game_outcome}\n")
                     results_text.insert(tk.END, f"  Has Gold: {test_agent.has_gold}\n")
-                    results_text.insert(tk.END, f"  Alive: {test_agent.alive}\n\n")
+                    results_text.insert(tk.END, f"  Can shoot: {test_agent.can_shoot}\n\n")
                     results_text.update()
                 
                 # Summary comparison
@@ -459,7 +460,7 @@ class ButtonFunctions:
                 results_text.insert(tk.END, f"Error during comparison: {str(e)}\n")
                 messagebox.showerror("Comparison Error", f"An error occurred: {str(e)}")
         
-        # Run comparison in a separate thread to avoid blocking UI
+        # Run comparison in a separate thread to avoid blocking UI  
         compare_window.after(100, run_comparison)
     
     def run_agent(self):
@@ -471,6 +472,6 @@ class ButtonFunctions:
         
         # Schedule next move if game is still running
         if self.parent.game_running and not self.parent.game_over and self.parent.agent.alive:
-            self.parent.after(1000, self.run_agent)  # Move every second
+            self.parent.after(500, self.run_agent)  # Move every second
         else:
             self.stop_game()
