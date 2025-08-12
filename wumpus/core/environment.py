@@ -10,7 +10,10 @@ class Cell:
         self.percepts = {'stench': False, 'breeze': False, 'glitter': False}  # Store percepts when visited
 
 class Environment:
-    def __init__(self, N=8, K=2, pit_prob=0.2):
+    def __init__(self, N=8, K=2, pit_prob=0.1, seed=None):
+        self._rand = random.Random(seed)
+
+        print(seed)
         self.__N = N
         self.__grid = [[Cell() for _ in range(N)] for _ in range(N)]
         self.__agent_pos = (0, 0)
@@ -27,7 +30,7 @@ class Environment:
         for y in range(self.__N):
             for x in range(self.__N):
                 if (x, y) == (0, 0): continue
-                if random.random() < pit_prob:
+                if self._rand.random() < pit_prob:
                     self.__grid[y][x].has_pit = True
 
     # Randomly place Wumpus
@@ -35,8 +38,8 @@ class Environment:
     def __place_wumpus(self, K):
         placed = 0
         while placed < K:
-            x = random.randint(0, self.__N - 1)
-            y = random.randint(0, self.__N - 1)
+            x = self._rand.randint(0, self.__N - 1)
+            y = self._rand.randint(0, self.__N - 1)
             if (x, y) != (0, 0) and not self.__grid[y][x].has_pit and not self.__grid[y][x].has_wumpus:
                 self.__grid[y][x].has_wumpus = True
                 placed += 1
@@ -44,8 +47,8 @@ class Environment:
     # Randomly place gold
     def __place_gold(self):
         while True:
-            x = random.randint(0, self.__N - 1)
-            y = random.randint(0, self.__N - 1)
+            x = self._rand.randint(0, self.__N - 1)
+            y = self._rand.randint(0, self.__N - 1)
             if not self.__grid[y][x].has_pit and not self.__grid[y][x].has_wumpus:
                 self.__grid[y][x].has_gold = True
                 self.__gold_pos = (x, y)

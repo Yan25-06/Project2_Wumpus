@@ -8,11 +8,9 @@ from .setup_ui import SetupUI
 from .draw_ui import DrawUI
 from .button_functions import ButtonFunctions
 
-
 class GameBoardUI(tk.Tk):
-    def __init__(self, width=8, height=8):
+    def __init__(self, width=8, height=8, seed=None):
         super().__init__()
-        
         self.title("Wumpus World Game Board")
         
         # Disable window resizing and maximize button
@@ -42,11 +40,13 @@ class GameBoardUI(tk.Tk):
         
         # Initialize environment and agent
         # Agent mode and board size variables
-        self.agent_mode = "Random"  # Default to Random
+        self.agent_mode = "Hybrid"  # Default to Hybrid
         self.board_size = 8  # Default board size
         
-        self.env = Environment(N=self.board_size)
-        self.agent = RandomAgent(self.env)
+        self.seed = seed
+        print(self.seed)
+        self.env = Environment(N=self.board_size, seed=self.seed)
+        self.agent = HybridAgent(self.env)
         self.game_running = False
         self.game_over = False
         self.steps = 0
@@ -82,7 +82,8 @@ class GameBoardUI(tk.Tk):
         return self.button_functions.stop_game()
     
     def reset_game(self):
-        return self.button_functions.reset_game()
+        self.seed += 1
+        return self.button_functions.reset_game(seed=self.seed)
     
     def toggle_agent_mode(self):
         return self.button_functions.toggle_agent_mode()
