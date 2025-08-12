@@ -151,18 +151,16 @@ class ButtonFunctions:
         self.parent.draw_ui.update_display()
     
     def change_board_size(self):
-        """Open comprehensive game settings dialog"""
         if self.parent.game_running:
             messagebox.showwarning("Cannot Change", "Stop the game before changing settings!")
             return
             
-        # Show comprehensive settings dialog
+        # Show settings dialog
         settings_window = tk.Toplevel(self.parent)
         settings_window.title("Game Settings")
-        settings_window.geometry("500x700")
+        settings_window.geometry("500x800")
         settings_window.resizable(False, False)
         
-        # Center the dialog
         settings_window.transient(self.parent)
         settings_window.grab_set()
         
@@ -207,6 +205,23 @@ class ButtonFunctions:
             ttk.Radiobutton(board_radio_frame, text=f"{size}x{size}", 
                           variable=board_size_var, value=size).grid(row=row, column=col, 
                           sticky='w', padx=(0, 20), pady=2)
+
+        # Environment Seed Section
+        seed_frame = ttk.LabelFrame(main_container, text="Environment Seed", padding=15)
+        seed_frame.pack(fill='x', pady=(0, 15))
+        
+        ttk.Label(seed_frame, text="Random seed for environment generation (1 to 20):", 
+                 font=('Arial', 10)).pack(anchor='w')
+        
+        seed_var = tk.IntVar(value=getattr(self.parent, 'seed', 1))
+        
+        seed_frame_inner = ttk.Frame(seed_frame)
+        seed_frame_inner.pack(fill='x', pady=(5, 0))
+        
+        # Input field for seed
+        ttk.Label(seed_frame_inner, text="Seed:").pack(side='left')
+        seed_entry = ttk.Entry(seed_frame_inner, textvariable=seed_var, width=10)
+        seed_entry.pack(side='left', padx=(5, 10))
         
         # Pit Probability Section
         pit_frame = ttk.LabelFrame(main_container, text="Pit Probability", padding=15)
@@ -220,7 +235,7 @@ class ButtonFunctions:
         pit_frame_inner = ttk.Frame(pit_frame)
         pit_frame_inner.pack(fill='x', pady=(5, 0))
         
-        # Input field for pit probability
+        # Input for pit probability
         ttk.Label(pit_frame_inner, text="Pit Probability:").pack(side='left')
         pit_entry = ttk.Entry(pit_frame_inner, textvariable=pit_prob_var, width=10)
         pit_entry.pack(side='left', padx=(5, 10))
@@ -236,7 +251,7 @@ class ButtonFunctions:
                 pit_percentage_label.config(text="Invalid")
         
         pit_prob_var.trace('w', update_pit_percentage)
-        update_pit_percentage()  # Initialize label
+        update_pit_percentage()  
         
         # Number of Wumpus Section
         wumpus_frame = ttk.LabelFrame(main_container, text="Number of Wumpus", padding=15)
@@ -250,10 +265,12 @@ class ButtonFunctions:
         wumpus_frame_inner = ttk.Frame(wumpus_frame)
         wumpus_frame_inner.pack(fill='x', pady=(5, 0))
         
-        # Input field for number of wumpus
+        # Input for number of wumpus
         ttk.Label(wumpus_frame_inner, text="Wumpus Count:").pack(side='left')
         wumpus_entry = ttk.Entry(wumpus_frame_inner, textvariable=wumpus_var, width=10)
         wumpus_entry.pack(side='left', padx=(5, 10))
+        
+        
         
         def apply_settings():
             try:
@@ -261,6 +278,7 @@ class ButtonFunctions:
                 new_board_size = board_size_var.get()
                 new_pit_prob = pit_prob_var.get()
                 new_wumpus_count = wumpus_var.get()
+                new_seed = seed_var.get()
                 
                 # Validate pit probability
                 if not (0.05 <= new_pit_prob <= 0.5):
@@ -276,6 +294,13 @@ class ButtonFunctions:
                                        f"Current value: {new_wumpus_count}")
                     return
                 
+                # Validate seed
+                if not (1 <= new_seed <= 20):
+                    messagebox.showerror("Invalid Settings", 
+                                       f"Seed must be between 1 and 20!\n"
+                                       f"Current value: {new_seed}")
+                    return
+                
                 # Validate wumpus count vs board size
                 max_wumpus = int(new_board_size * new_board_size * 0.4)  # Max 40% of cells
                 if new_wumpus_count > max_wumpus:
@@ -287,20 +312,22 @@ class ButtonFunctions:
                 
             except ValueError:
                 messagebox.showerror("Invalid Input", 
-                                   "Please enter valid numbers for pit probability and wumpus count.")
+                                   "Please enter valid numbers for pit probability, wumpus count, and seed.")
                 return
             
             # Check if only agent mode changed (keep same map)
             agent_mode_changed = new_agent_mode != getattr(self.parent, 'agent_mode', 'Hybrid')
             settings_changed = (new_board_size != getattr(self.parent, 'board_size', 8) or
                               new_pit_prob != getattr(self.parent, 'pit_probability', 0.2) or
-                              new_wumpus_count != getattr(self.parent, 'wumpus_count', 2))
+                              new_wumpus_count != getattr(self.parent, 'wumpus_count', 2) or
+                              new_seed != getattr(self.parent, 'seed', 1))
             
             # Store new settings
             self.parent.agent_mode = new_agent_mode
             self.parent.board_size = new_board_size
             self.parent.pit_probability = new_pit_prob
             self.parent.wumpus_count = new_wumpus_count
+            self.parent.seed = new_seed
             self.parent.width = new_board_size
             self.parent.height = new_board_size
             
@@ -311,16 +338,16 @@ class ButtonFunctions:
             # Recalculate cell size based on new board size
             screen_width = self.parent.winfo_screenwidth()
             screen_height = self.parent.winfo_screenheight()
-            available_width = screen_width - 600  # Reserve space for right panel
-            available_height = screen_height - 250  # Leave space for title and margins
+            available_width = screen_width - 600  
+            available_height = screen_height - 250  
             
             # Calculate optimal cell size for new board size
             max_cell_width = available_width // self.parent.width
             max_cell_height = available_height // self.parent.height
-            self.parent.cell_size = min(max_cell_width, max_cell_height, 120)  # Cap at 120px
+            self.parent.cell_size = min(max_cell_width, max_cell_height, 120)  
             
             print(f"Settings update - Agent: {new_agent_mode}, Board: {new_board_size}x{new_board_size}, "
-                  f"Pit Prob: {new_pit_prob:.1%}, Wumpus: {new_wumpus_count}, "
+                  f"Pit Prob: {new_pit_prob:.1%}, Wumpus: {new_wumpus_count}, Seed: {new_seed}, "
                   f"Cell size: {self.parent.cell_size}px")
             
             # Handle environment recreation based on what changed
@@ -328,16 +355,13 @@ class ButtonFunctions:
                 # Environment settings changed - create new random environment
                 print("Creating new random environment due to setting changes")
                 self.parent.env = Environment(N=new_board_size, K=new_wumpus_count, 
-                                            pit_prob=new_pit_prob, seed=self.parent.seed)
+                                            pit_prob=new_pit_prob, seed=new_seed)
                 change_message = "Environment settings changed - new random map generated"
             elif agent_mode_changed:
                 # Only agent mode changed - keep same environment, just reset agent position
                 print("Agent mode changed - keeping same environment, resetting agent state and visited cells")
-                # Reset agent position in current environment but don't change the map
                 self.parent.env.set_agent_pos_and_dir(0, 0, 'E')
-                # Reset all visited cells so the new agent starts fresh
                 self.parent.env.reset_visited_cells()
-                # Mark starting position as visited for the new agent
                 self.parent.env.mark_visited(0, 0)
                 change_message = "Agent type changed - same map layout maintained, visited cells reset"
             else:
@@ -346,14 +370,12 @@ class ButtonFunctions:
             # Create agent based on new mode
             if new_agent_mode == "Random":
                 self.parent.agent = RandomAgent(self.parent.env)
-            else:  # Hybrid
+            else:  
                 self.parent.agent = HybridAgent(self.parent.env)
             
-            # Reset agent's visited tracking if it exists (for HybridAgent)
             if hasattr(self.parent.agent, 'visited'):
-                self.parent.agent.visited = {(0, 0)}  # Reset with starting position
+                self.parent.agent.visited = {(0, 0)}  
             
-            # Update canvas size if board size changed
             if settings_changed:
                 self.parent.canvas.config(width=self.parent.width * self.parent.cell_size, 
                                  height=self.parent.height * self.parent.cell_size)
@@ -368,7 +390,6 @@ class ButtonFunctions:
             
             settings_window.destroy()
             
-            # Show appropriate message
             if agent_mode_changed and not settings_changed:
                 messagebox.showinfo("Agent Changed", 
                                   f"Agent type changed to: {new_agent_mode}\n"
@@ -380,10 +401,10 @@ class ButtonFunctions:
                                   f"• Board Size: {new_board_size}x{new_board_size}\n"
                                   f"• Pit Probability: {new_pit_prob:.1%}\n"
                                   f"• Wumpus Count: {new_wumpus_count}\n"
+                                  f"• Seed: {new_seed}\n"
                                   f"• Cell Size: {self.parent.cell_size}px\n\n"
                                   f"{change_message}")
         
-        # Button frame
         button_frame = ttk.Frame(main_container)
         button_frame.pack(pady=(20, 0))
         

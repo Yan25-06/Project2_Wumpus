@@ -45,7 +45,7 @@ class GameBoardUI(tk.Tk):
         self.pit_probability = 0.2  # Default pit probability (20%)
         self.wumpus_count = 2  # Default number of wumpus
         
-        self.seed = seed
+        self.seed = seed if seed is not None else 1  # Default seed to 1
         print(self.seed)
         self.env = Environment(N=self.board_size, K=self.wumpus_count, 
                               pit_prob=self.pit_probability, seed=self.seed)
