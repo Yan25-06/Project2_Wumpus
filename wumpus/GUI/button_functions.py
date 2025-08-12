@@ -326,13 +326,27 @@ class ButtonFunctions:
                     # Create new environment with same configuration
                     test_env = Environment(N=self.parent.board_size)
                     
+                    # Clear the randomly generated elements first
+                    for env_y in range(self.parent.board_size):
+                        for env_x in range(self.parent.board_size):
+                            if test_env.has_wumpus(env_x, env_y):
+                                test_env._Environment__grid[env_y][env_x].has_wumpus = False
+                            if test_env.has_pit(env_x, env_y):
+                                test_env._Environment__grid[env_y][env_x].has_pit = False
+                            if test_env.has_gold(env_x, env_y):
+                                test_env._Environment__grid[env_y][env_x].has_gold = False
+                    
                     # Restore the exact same map configuration
                     if saved_wumpus_pos:
-                        test_env.wumpus_location = saved_wumpus_pos
-                    if saved_pit_positions:
-                        test_env.pit_locations = saved_pit_positions.copy()
+                        wx, wy = saved_wumpus_pos
+                        test_env._Environment__grid[wy][wx].has_wumpus = True
+                    
+                    for pit_x, pit_y in saved_pit_positions:
+                        test_env._Environment__grid[pit_y][pit_x].has_pit = True
+                    
                     if saved_gold_pos:
-                        test_env.gold_location = saved_gold_pos
+                        gx, gy = saved_gold_pos
+                        test_env._Environment__grid[gy][gx].has_gold = True
                     
                     # Create agent
                     if agent_name == "Random":
