@@ -36,6 +36,9 @@ class SetupUI:
         board_frame = ttk.LabelFrame(parent_frame, text="GAME BOARD", padding=10)
         board_frame.pack(side='left', fill='both', padx=(0, 10))
         
+        # Store reference to board frame for use in other parts of the application
+        self.parent.left_frame = board_frame
+        
         self.parent.canvas = tk.Canvas(
             board_frame, 
             width=self.parent.width * self.parent.cell_size,
@@ -82,14 +85,9 @@ class SetupUI:
                                       command=self.parent.reset_game, **button_style)
         self.parent.reset_button.pack(pady=2)
         
-        # Agent mode selection button
-        self.parent.agent_button = ttk.Button(control_frame, text=f"AGENT: {self.parent.agent_mode}", 
-                                     command=self.parent.toggle_agent_mode, **button_style)
-        self.parent.agent_button.pack(pady=2)
-        
-        # Board size selection button
-        self.parent.size_button = ttk.Button(control_frame, text=f"SIZE: {self.parent.board_size}x{self.parent.board_size}", 
-                                    command=self.parent.change_board_size, **button_style)
+        # Game settings button (agent type, board size, pit probability, wumpus count)
+        self.parent.size_button = ttk.Button(control_frame, text="SETTINGS", 
+                                    command=self.parent.button_functions.change_board_size, **button_style)
         self.parent.size_button.pack(pady=2)
         
         # Compare agents button

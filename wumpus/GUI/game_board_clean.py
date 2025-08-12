@@ -39,13 +39,16 @@ class GameBoardUI(tk.Tk):
         print(f"Initial board size: {self.width}x{self.height}, Cell size: {self.cell_size}px")  # Debugging output 
         
         # Initialize environment and agent
-        # Agent mode and board size variables
+        # Agent mode and game settings variables
         self.agent_mode = "Hybrid"  # Default to Hybrid
         self.board_size = 8  # Default board size
+        self.pit_probability = 0.2  # Default pit probability (20%)
+        self.wumpus_count = 2  # Default number of wumpus
         
         self.seed = seed
         print(self.seed)
-        self.env = Environment(N=self.board_size, seed=self.seed)
+        self.env = Environment(N=self.board_size, K=self.wumpus_count, 
+                              pit_prob=self.pit_probability, seed=self.seed)
         self.agent = HybridAgent(self.env)
         self.game_running = False
         self.game_over = False
@@ -61,6 +64,16 @@ class GameBoardUI(tk.Tk):
     def setup_ui(self):
         """Setup the UI using the SetupUI handler"""
         self.setup_ui_handler.setup_ui()
+        
+        # Create a dummy agent button reference for settings to update
+        # Since agent selection is now in settings, we create a Label to show current agent
+        agent_info_frame = ttk.Frame(self.left_frame)
+        agent_info_frame.pack(pady=(10, 0))
+        
+        ttk.Label(agent_info_frame, text="Current Agent:", font=('Arial', 10, 'bold')).pack()
+        self.agent_button = ttk.Label(agent_info_frame, text=f"AGENT: {self.agent_mode}", 
+                                     font=('Arial', 10), relief='sunken', padding=5)
+        self.agent_button.pack()
         
         # Draw initial board
         self.draw_ui.draw_board()
@@ -83,9 +96,6 @@ class GameBoardUI(tk.Tk):
     def reset_game(self):
         self.seed += 1
         return self.button_functions.reset_game(seed=self.seed)
-    
-    def toggle_agent_mode(self):
-        return self.button_functions.toggle_agent_mode()
     
     def change_board_size(self):
         return self.button_functions.change_board_size()
