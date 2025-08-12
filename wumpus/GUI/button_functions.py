@@ -66,7 +66,7 @@ class ButtonFunctions:
                 action_taken = f"Agent turned {direction_word} to {new_dir}"
             elif new_has_gold and not prev_has_gold:
                 action_taken = "Agent grabbed the gold!"
-            elif new_score == prev_score - 1000:
+            elif new_score == prev_score - 10:
                 action_taken = "Agent shot and " + ("killed the Wumpus!" if self.parent.env.get_scream() else "missed.")
             elif not continue_game and (self.parent.agent.x, self.parent.agent.y) == (0, 0):
                 action_taken = f"Agent climbed out {'with' if self.parent.agent.has_gold else 'without'} the gold!"
@@ -458,6 +458,6 @@ class ButtonFunctions:
         
         # Schedule next move if game is still running
         if self.parent.game_running and not self.parent.game_over and self.parent.agent.alive:
-            self.parent.after(500, self.run_agent)  # Move every second
+            self.parent.after(100, self.run_agent)  # Move every second
         else:
             self.stop_game()
