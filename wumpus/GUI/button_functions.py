@@ -95,7 +95,7 @@ class ButtonFunctions:
             else:
                 self.parent.status_label.config(text="Game ended")
         
-        if self.parent.agent.steps > 100:
+        if self.parent.agent.steps > 500:
             self.parent.game_over = True
             self.parent.status_label.config(text="Game Over! Too many steps!")
             messagebox.showwarning("Game Over", "Agent took too many steps!")
@@ -358,12 +358,11 @@ class ButtonFunctions:
                                             pit_prob=new_pit_prob, seed=new_seed)
                 change_message = "Environment settings changed - new random map generated"
             elif agent_mode_changed:
-                # Only agent mode changed - keep same environment, just reset agent position
-                print("Agent mode changed - keeping same environment, resetting agent state and visited cells")
-                self.parent.env.set_agent_pos_and_dir(0, 0, 'E')
-                self.parent.env.reset_visited_cells()
-                self.parent.env.mark_visited(0, 0)
-                change_message = "Agent type changed - same map layout maintained, visited cells reset"
+                # Agent mode changed - create fresh environment with same seed to restore original state
+                print("Agent mode changed - creating fresh environment with same seed to restore original state")
+                self.parent.env = Environment(N=new_board_size, K=new_wumpus_count, 
+                                            pit_prob=new_pit_prob, seed=new_seed)
+                change_message = "Agent type changed - fresh environment created with same layout and restored wumpus"
             else:
                 change_message = "No changes detected"
             
@@ -393,7 +392,8 @@ class ButtonFunctions:
             if agent_mode_changed and not settings_changed:
                 messagebox.showinfo("Agent Changed", 
                                   f"Agent type changed to: {new_agent_mode}\n"
-                                  f"Same map layout maintained for fair comparison.")
+                                  f"Fresh environment created with same layout.\n"
+                                  f"All wumpus and gold restored to original positions.")
             else:
                 messagebox.showinfo("Settings Applied", 
                                   f"Game settings updated:\n"
@@ -518,13 +518,11 @@ class ButtonFunctions:
                         test_agent = HybridAgent(test_env)
                     
                     # Run agent with step limit
-                    steps = 0
-                    max_steps = 100
+                    max_steps = 500
                     game_outcome = "Unknown"
                     
-                    while steps < max_steps and test_agent.alive:
+                    while test_agent.steps < max_steps and test_agent.alive:
                         continue_game = test_agent.step()
-                        steps += 1
                         
                         if not continue_game:
                             if test_agent.has_gold and (test_agent.x, test_agent.y) == (0, 0):
@@ -538,13 +536,13 @@ class ButtonFunctions:
                         if not test_agent.alive:
                             game_outcome = "Died"
                             break
-                    
-                    if steps >= max_steps:
-                        game_outcome = "Timeout (100+ steps)"
+
+                    if test_agent.steps >= max_steps:
+                        game_outcome = "Timeout (500+ steps)"
                     
                     # Store results
                     agent_results[agent_name] = {
-                        'steps': steps,
+                        'steps': test_agent.steps,
                         'score': test_agent.score,
                         'outcome': game_outcome,
                         'has_gold': test_agent.has_gold,
@@ -553,7 +551,7 @@ class ButtonFunctions:
                     }
                     
                     # Display results
-                    update_ui(f"  Steps: {steps}\n")
+                    update_ui(f"  Steps: {test_agent.steps}\n")
                     update_ui(f"  Final Score: {test_agent.score}\n")
                     update_ui(f"  Outcome: {game_outcome}\n")
                     update_ui(f"  Has Gold: {test_agent.has_gold}\n")
@@ -630,6 +628,6 @@ class ButtonFunctions:
         
         # Schedule next move if game is still running
         if self.parent.game_running and not self.parent.game_over and self.parent.agent.alive:
-            self.parent.after(100, self.run_agent)  # Move every second
+            self.parent.after(600, self.run_agent)  # Move every second
         else:
             self.stop_game()

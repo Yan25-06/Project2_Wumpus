@@ -18,6 +18,7 @@ def run_console():
 def run_gui():
     from .GUI.game_board_clean import GameBoardUI
     app = GameBoardUI(seed=6) 
+    app.env.print_environment_state()
     app.mainloop()
 
 if __name__ == "__main__":
