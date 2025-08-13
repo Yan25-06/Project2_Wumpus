@@ -71,9 +71,9 @@ class Environment:
     def shot_wumpus(self):
         dx, dy = 0, 0
         if self.__agent_dir == 'N':
-            dy = -1
-        elif self.__agent_dir == 'S':
             dy = 1
+        elif self.__agent_dir == 'S':
+            dy = -1
         elif self.__agent_dir == 'E':
             dx = 1
         elif self.__agent_dir == 'W':
