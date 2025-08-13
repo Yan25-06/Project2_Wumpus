@@ -211,7 +211,8 @@ class HybridAgent(Agent):
                 target_dir = 'W'
         else:
             return False
-        
+        print(f"Turn to shoot direction: {target_dir}")
+        print(f"Current direction: {self.dir}") 
         current_idx = DIRECTIONS.index(self.dir)
         target_idx = DIRECTIONS.index(target_dir)
         diff = (target_idx - current_idx) % 4
@@ -267,8 +268,8 @@ class HybridAgent(Agent):
 
         if len(self.route) == 0:
             if (self.aimed_wumpus != (-1, -1)):
-                if self.debug:
-                    print(f"[DEBUG] Aimed Wumpus at {self.aimed_wumpus}. Turning to shoot direction.")
+                # if self.debug:
+                print(f"[DEBUG] Aimed Wumpus at {self.aimed_wumpus}. Turning to shoot direction.")
                 shoot = self.turn_to_shoot_dir()
                 if not shoot:
                     print("Tinh sai vi tri ban roi m")

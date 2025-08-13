@@ -95,7 +95,7 @@ class ButtonFunctions:
             else:
                 self.parent.status_label.config(text="Game ended")
         
-        if self.parent.agent.steps > 100:
+        if self.parent.agent.steps > 500:
             self.parent.game_over = True
             self.parent.status_label.config(text="Game Over! Too many steps!")
             messagebox.showwarning("Game Over", "Agent took too many steps!")
