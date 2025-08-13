@@ -9,7 +9,7 @@ from typing import List, Union
 # It's a helper to easier write rules in plain text then convert automatically
 # Instead of hardcoding rules in the codebase 
 
-# Prompt: Implement a parser, that parse Predicate, and/or, =>,... (first order logics) from plain text into python class. You can use | for or => for predicates and & for and and so on
+# Prompt: Implement a parser, that parse Predicate, and/or, =>,... (propositional logics) from plain text into python class. You can use | for or => for predicates, & for and, ! for not
 
 @dataclass
 class Predicate:
@@ -228,7 +228,9 @@ if __name__ == "__main__":
     parser = LogicParser()
 
     expr1 = parser.parse("Pit(x,y) => Breeze(x,y)")
-    expr2 = parser.parse("Breeze(1,2) & Stench(1,2)")
+    expr2 = parser.parse("Breeze(1,2) & Stench(1,2)") 
+    # is equivalent to  
+    expr2 = And(Predicate("Breeze", ["1", "2"]), Predicate("Stench", ["1", "2"]))
     expr3 = parser.parse("Gold(3,3) | (Pit(2,2) & Wumpus(1,3))")
     expr4 = parser.parse("!Pit(1,1)")
     expr5 = parser.parse("Breeze(1,1)")

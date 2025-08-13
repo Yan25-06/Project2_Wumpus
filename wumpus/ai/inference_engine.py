@@ -124,6 +124,7 @@ class InferenceEngine:
                 if self.is_model_satisfied(grounded_rules, model):
                     kb_true_count += 1
                     if self.is_model_satisfied([query], model):
+                        # if it goes here, it means the all kb rules is satisfied, including the query
                         query_true_count += 1
 
                 # if self.debug:
@@ -136,6 +137,7 @@ class InferenceEngine:
                 if truth_value:
                     new_model.append(next_symbol)
                 else:
+                    # absence of the symbol means it is false
                     if next_symbol in new_model:
                         new_model.remove(next_symbol)
                 model_check_recursive(unknown_symbols[1:], query, new_model)
